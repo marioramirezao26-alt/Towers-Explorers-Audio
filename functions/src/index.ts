@@ -41,7 +41,7 @@ export const transcribeVoiceNote = onObjectFinalized(
     try {
       await bucket.file(filePath).download({ destination: tempFilePath });
 
-      const openai = new OpenAI({ apiKey: openaiApiKey.value() });
+      const openai = new OpenAI({ apiKey: openaiApiKey.value(), maxRetries: 3, timeout: 60000 });
       const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
         model: 'whisper-1',
@@ -53,8 +53,12 @@ export const transcribeVoiceNote = onObjectFinalized(
         status: 'done',
       });
     } catch (error: any) {
-      console.error('Error transcribiendo nota de voz:', error);
-      const detail = error?.response?.data?.error?.message ?? error?.message ?? String(error);
+      console.error('Error transcribiendo nota de voz:', error, 'cause:', error?.cause);
+      const detail =
+        error?.response?.data?.error?.message ??
+        (error?.cause ? `${error.message} (${error.cause.code ?? ''} ${error.cause.message ?? ''})`.trim() : null) ??
+        error?.message ??
+        String(error);
       await noteRef.update({ status: 'error', transcript: `Error al transcribir: ${detail}` }).catch(() => {});
     } finally {
       fs.promises.unlink(tempFilePath).catch(() => {});
