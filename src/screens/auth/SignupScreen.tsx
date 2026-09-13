@@ -7,6 +7,23 @@ import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
+function describeSignupError(e: any): string {
+  switch (e?.code) {
+    case 'auth/email-already-in-use':
+      return 'Ese correo ya tiene una cuenta. Intenta iniciar sesión en su lugar.';
+    case 'auth/invalid-email':
+      return 'Ese correo no es válido.';
+    case 'auth/weak-password':
+      return 'La contraseña es muy débil, usa al menos 6 caracteres.';
+    case 'auth/network-request-failed':
+      return 'No hay conexión a internet. Revisa tu red e intenta de nuevo.';
+    case 'permission-denied':
+      return 'Firestore rechazó la escritura (permission-denied). Revisa que hayas desplegado firestore.rules a tu proyecto.';
+    default:
+      return `No pudimos crear tu cuenta (${e?.code ?? 'error desconocido'}): ${e?.message ?? e}`;
+  }
+}
+
 export default function SignupScreen({ navigation }: Props) {
   const { signUp } = useAuth();
   const [name, setName] = useState('');
@@ -25,7 +42,7 @@ export default function SignupScreen({ navigation }: Props) {
     try {
       await signUp(email.trim(), password, name.trim());
     } catch (e: any) {
-      setError('No pudimos crear tu cuenta. ¿Ese correo ya está registrado?');
+      setError(describeSignupError(e));
     } finally {
       setLoading(false);
     }

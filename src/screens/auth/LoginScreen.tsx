@@ -7,6 +7,20 @@ import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
+function describeLoginError(e: any): string {
+  switch (e?.code) {
+    case 'auth/invalid-email':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Correo o contraseña incorrectos.';
+    case 'auth/network-request-failed':
+      return 'No hay conexión a internet. Revisa tu red e intenta de nuevo.';
+    default:
+      return `No pudimos iniciar sesión (${e?.code ?? 'error desconocido'}): ${e?.message ?? e}`;
+  }
+}
+
 export default function LoginScreen({ navigation }: Props) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
@@ -20,7 +34,7 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await signIn(email.trim(), password);
     } catch (e: any) {
-      setError('No pudimos iniciar sesión. Revisa tu correo y contraseña.');
+      setError(describeLoginError(e));
     } finally {
       setLoading(false);
     }
