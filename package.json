@@ -8,8 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export -p web",
-    "deploy:web": "expo export -p web && firebase deploy --only hosting",
+    "build:web": "expo export -p web --clear",
+    "deploy:web": "expo export -p web --clear && firebase deploy --only hosting",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },
