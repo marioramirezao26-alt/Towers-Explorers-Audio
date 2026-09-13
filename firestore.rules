@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(workspaceId) {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.memberIds;
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      // El propio usuario puede editar su perfil; workspaceId también lo actualiza
+      // el flujo de crear/unirse a un espacio de trabajo (mismo uid autenticado).
+      allow update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId} {
+      allow read: if isMember(workspaceId);
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.memberIds;
+      // Unirse agrega el propio uid a memberIds; los demás campos los mantiene cualquier miembro.
+      allow update: if isSignedIn() && (
+        isMember(workspaceId) ||
+        request.resource.data.memberIds == resource.data.memberIds.concat([request.auth.uid])
+      );
+      allow delete: if false;
+
+      match /appointments/{appointmentId} {
+        allow read, write: if isMember(workspaceId);
+      }
+
+      match /voiceNotes/{noteId} {
+        allow read, write: if isMember(workspaceId);
+      }
+    }
+  }
+}

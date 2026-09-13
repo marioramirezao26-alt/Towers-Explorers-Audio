@@ -1,0 +1,76 @@
+import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import LoginScreen from '@/screens/auth/LoginScreen';
+import SignupScreen from '@/screens/auth/SignupScreen';
+import WorkspaceSetupScreen from '@/screens/workspace/WorkspaceSetupScreen';
+import AppointmentFormScreen from '@/screens/appointments/AppointmentFormScreen';
+import RecordVoiceNoteScreen from '@/screens/voicenotes/RecordVoiceNoteScreen';
+import AppTabs from './AppTabs';
+
+export type RootStackParamList = {
+  Login: undefined;
+  Signup: undefined;
+  WorkspaceSetup: undefined;
+  AppTabs: undefined;
+  AppointmentForm: { appointmentId?: string } | undefined;
+  RecordVoiceNote: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+function LoadingScreen() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator size="large" color="#4F46E5" />
+    </View>
+  );
+}
+
+export default function RootNavigator() {
+  const { firebaseUser, profile, initializing } = useAuth();
+  const { loading: workspaceLoading } = useWorkspace();
+
+  if (initializing) {
+    return <LoadingScreen />;
+  }
+
+  const isLoggedIn = !!firebaseUser && !!profile;
+  const hasWorkspace = !!profile?.workspaceId;
+
+  if (isLoggedIn && hasWorkspace && workspaceLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isLoggedIn ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+          </>
+        ) : !hasWorkspace ? (
+          <Stack.Screen name="WorkspaceSetup" component={WorkspaceSetupScreen} />
+        ) : (
+          <>
+            <Stack.Screen name="AppTabs" component={AppTabs} />
+            <Stack.Screen
+              name="AppointmentForm"
+              component={AppointmentFormScreen}
+              options={{ headerShown: true, title: 'Cita', presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="RecordVoiceNote"
+              component={RecordVoiceNoteScreen}
+              options={{ headerShown: true, title: 'Nueva nota de voz', presentation: 'modal' }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

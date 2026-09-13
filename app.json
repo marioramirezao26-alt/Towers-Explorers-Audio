@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Socio Assistant",
+    "slug": "socio-assistant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "socioassistant",
+    "backgroundColor": "#0F172A",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.socioassistant.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Necesitamos el micrófono para grabar tus notas de voz."
+      }
+    },
+    "android": {
+      "package": "com.socioassistant.app",
+      "permissions": ["RECORD_AUDIO"]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
