@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import DateTimeField from '@/components/DateTimeField';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
@@ -32,8 +30,6 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
   const [location, setLocation] = useState('');
   const [startTime, setStartTime] = useState(new Date(Date.now() + 60 * 60 * 1000));
   const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,39 +140,8 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
         style={styles.input}
       />
 
-      <Text variant="labelLarge" style={styles.label}>
-        Inicio
-      </Text>
-      <Button mode="outlined" onPress={() => setShowStartPicker(true)} style={styles.dateButton}>
-        {format(startTime, "d 'de' MMMM, HH:mm", { locale: es })}
-      </Button>
-      {showStartPicker && (
-        <DateTimePicker
-          value={startTime}
-          mode="datetime"
-          onChange={(_, date) => {
-            setShowStartPicker(Platform.OS === 'ios');
-            if (date) setStartTime(date);
-          }}
-        />
-      )}
-
-      <Text variant="labelLarge" style={styles.label}>
-        Fin
-      </Text>
-      <Button mode="outlined" onPress={() => setShowEndPicker(true)} style={styles.dateButton}>
-        {format(endTime, "d 'de' MMMM, HH:mm", { locale: es })}
-      </Button>
-      {showEndPicker && (
-        <DateTimePicker
-          value={endTime}
-          mode="datetime"
-          onChange={(_, date) => {
-            setShowEndPicker(Platform.OS === 'ios');
-            if (date) setEndTime(date);
-          }}
-        />
-      )}
+      <DateTimeField label="Inicio" value={startTime} onChange={setStartTime} />
+      <DateTimeField label="Fin" value={endTime} onChange={setEndTime} />
 
       {error && (
         <Text style={styles.error} variant="bodySmall">
@@ -210,8 +175,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { padding: 16, paddingBottom: 48 },
   input: { marginBottom: 12 },
-  label: { marginTop: 4, marginBottom: 4 },
-  dateButton: { marginBottom: 12, alignItems: 'flex-start' },
   button: { marginTop: 8 },
   error: { color: '#DC2626', marginVertical: 8, textAlign: 'center' },
 });

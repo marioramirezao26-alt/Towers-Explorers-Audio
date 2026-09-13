@@ -95,9 +95,46 @@ npx expo start
 
 Escanea el código QR con la app **Expo Go** en tu celular (Android) o con la cámara (iOS) para probarla de inmediato, sin necesidad de compilar nada.
 
-## 6. Generar una app instalable (opcional)
+## 6. Instalarla en tu iPhone sin Expo Go (PWA gratis, recomendado)
 
-Cuando quieras algo que puedas instalar como app real (ícono propio, notificaciones, etc.), usa [EAS Build](https://docs.expo.dev/build/introduction/):
+Si tu iPhone y tu PC no logran conectarse por WiFi/túnel para usar Expo Go (firewall, antivirus, red del router, etc.), esta opción evita el problema por completo: publicas Gaby como una página web y la "instalas" desde Safari — sin Mac, sin cuenta de Apple Developer, sin costo.
+
+1. Instala las herramientas de Firebase y conecta tu proyecto (una sola vez):
+
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   firebase use --add        # selecciona tu proyecto (ej. gaby-c76cf)
+   ```
+
+2. Genera el build web y configura el hosting (una sola vez):
+
+   ```bash
+   npm run build:web
+   firebase init hosting
+   ```
+
+   En las preguntas de `firebase init hosting`, responde:
+   - "What do you want to use as your public directory?" → `dist`
+   - "Configure as a single-page app?" → **Yes**
+   - "Set up automatic builds and deploys with GitHub?" → **No**
+   - Si pregunta si sobrescribir `dist/index.html` → **No**
+
+3. Publica:
+
+   ```bash
+   npm run deploy:web
+   ```
+
+   Al terminar te da una URL tipo `https://gaby-c76cf.web.app`.
+
+4. En tu iPhone, abre esa URL en **Safari** (no en Chrome, tiene que ser Safari) → toca el ícono de **Compartir** (el cuadrito con la flecha) → **"Agregar a inicio"**. Te va a quedar un ícono de "Gaby" en tu pantalla de inicio que abre directo, sin la barra del navegador.
+
+Cada vez que hagamos cambios a la app, solo necesitas correr `npm run deploy:web` de nuevo y refrescar la página en tu iPhone.
+
+## 7. Generar una app instalable nativa (opcional, más adelante)
+
+Cuando quieras algo 100% nativo (ícono propio en la App Store/Play Store, notificaciones push, etc.), usa [EAS Build](https://docs.expo.dev/build/introduction/). En iPhone esto requiere una cuenta de pago de Apple Developer Program (99 USD/año), ya que Apple no permite instalar apps propias sin ella si no tienes Mac:
 
 ```bash
 npm install -g eas-cli
