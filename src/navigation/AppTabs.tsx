@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppointmentsScreen from '@/screens/appointments/AppointmentsScreen';
 import VoiceNotesScreen from '@/screens/voicenotes/VoiceNotesScreen';
 import HomeScreen from '@/screens/home/HomeScreen';
+import { colors } from '@/theme';
 
 export type AppTabsParamList = {
   Home: undefined;
@@ -18,7 +19,12 @@ export default function AppTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4F46E5',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
       }}
     >
       <Tab.Screen
@@ -26,8 +32,12 @@ export default function AppTabs() {
         component={HomeScreen}
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="hand-heart" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -36,8 +46,12 @@ export default function AppTabs() {
         component={AppointmentsScreen}
         options={{
           title: 'Citas',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar-clock" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'calendar-clock' : 'calendar-clock-outline'}
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -46,8 +60,12 @@ export default function AppTabs() {
         component={VoiceNotesScreen}
         options={{
           title: 'Notas de voz',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="microphone" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'waveform' : 'microphone-outline'}
+              color={color}
+              size={size}
+            />
           ),
         }}
       />

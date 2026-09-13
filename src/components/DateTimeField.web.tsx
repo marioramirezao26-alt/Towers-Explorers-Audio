@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
+import { colors } from '@/theme';
 
 interface Props {
   label: string;
@@ -38,13 +39,16 @@ export default function DateTimeField({ label, value, onChange }: Props) {
 const webInputStyle: React.CSSProperties = {
   fontSize: 16,
   padding: '10px 12px',
-  borderRadius: 4,
-  border: '1px solid #79747E',
+  borderRadius: 8,
+  border: `1px solid ${colors.border}`,
   marginBottom: 12,
   fontFamily: 'inherit',
+  backgroundColor: colors.surfaceVariant,
+  color: colors.text,
+  colorScheme: 'dark',
 };
 
 const styles = StyleSheet.create({
   container: { marginBottom: 4 },
-  label: { marginTop: 4, marginBottom: 4 },
+  label: { marginTop: 4, marginBottom: 4, color: colors.textMuted },
 });

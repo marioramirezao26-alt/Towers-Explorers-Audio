@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Button, Card, FAB, Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { subscribeToAppointments, deleteAppointment } from '@/services/appointments';
 import { Appointment } from '@/types';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+import { colors } from '@/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -32,7 +34,9 @@ export default function AppointmentsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text variant="headlineSmall">Citas</Text>
+        <Text variant="headlineSmall" style={styles.headerTitle}>
+          Citas
+        </Text>
       </View>
 
       <FlatList
@@ -40,27 +44,45 @@ export default function AppointmentsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>Aún no tienes citas. Toca + para agendar una.</Text>
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={colors.textMuted} />
+            <Text style={styles.empty}>Aún no tienes citas. Toca + para agendar una.</Text>
+          </View>
         }
         renderItem={({ item }) => (
           <Card
             style={styles.card}
+            mode="contained"
             onPress={() => navigation.navigate('AppointmentForm', { appointmentId: item.id })}
           >
             <Card.Content>
-              <Text variant="titleMedium">{item.title}</Text>
+              <Text variant="titleMedium" style={styles.cardTitle}>
+                {item.title}
+              </Text>
               <Text variant="bodySmall" style={styles.date}>
                 {format(new Date(item.startTime), "EEEE d 'de' MMMM, HH:mm", { locale: es })}
               </Text>
-              {!!item.location && <Text variant="bodySmall">📍 {item.location}</Text>}
+              {!!item.location && (
+                <View style={styles.row}>
+                  <MaterialCommunityIcons name="map-marker-outline" size={14} color={colors.textMuted} />
+                  <Text variant="bodySmall" style={styles.rowText}>
+                    {item.location}
+                  </Text>
+                </View>
+              )}
               {Object.keys(item.googleEventIds ?? {}).length > 0 && (
-                <Text variant="bodySmall" style={styles.synced}>
-                  ✓ Sincronizada con Google Calendar
-                </Text>
+                <View style={styles.row}>
+                  <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
+                  <Text variant="bodySmall" style={[styles.rowText, styles.synced]}>
+                    Sincronizada con Google Calendar
+                  </Text>
+                </View>
               )}
             </Card.Content>
             <Card.Actions>
-              <Button onPress={() => handleDelete(item.id)}>Eliminar</Button>
+              <Button icon="delete-outline" textColor={colors.error} onPress={() => handleDelete(item.id)}>
+                Eliminar
+              </Button>
             </Card.Actions>
           </Card>
         )}
@@ -68,6 +90,7 @@ export default function AppointmentsScreen() {
 
       <FAB
         icon="plus"
+        color="#FFFFFF"
         style={[styles.fab, { bottom: insets.bottom + 16 }]}
         onPress={() => navigation.navigate('AppointmentForm')}
       />
@@ -76,12 +99,17 @@ export default function AppointmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16, paddingBottom: 8 },
+  headerTitle: { color: colors.text },
   list: { padding: 16, paddingTop: 0, paddingBottom: 96 },
-  card: { marginBottom: 12 },
-  date: { marginTop: 4, opacity: 0.7, textTransform: 'capitalize' },
-  synced: { marginTop: 4, color: '#16A34A' },
-  empty: { textAlign: 'center', marginTop: 48, opacity: 0.6 },
-  fab: { position: 'absolute', right: 16 },
+  card: { marginBottom: 12, backgroundColor: colors.surface },
+  cardTitle: { color: colors.text },
+  date: { marginTop: 4, color: colors.textMuted, textTransform: 'capitalize' },
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  rowText: { marginLeft: 4, color: colors.textMuted },
+  synced: { color: colors.success },
+  emptyContainer: { alignItems: 'center', marginTop: 48 },
+  empty: { textAlign: 'center', marginTop: 12, color: colors.textMuted },
+  fab: { position: 'absolute', right: 16, backgroundColor: colors.primary },
 });

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -45,6 +47,12 @@ export default function LoginScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <MaterialCommunityIcons
+        name="hexagon-multiple-outline"
+        size={48}
+        color={colors.accent}
+        style={styles.logo}
+      />
       <Text variant="headlineMedium" style={styles.title}>
         Gaby
       </Text>
@@ -53,6 +61,7 @@ export default function LoginScreen({ navigation }: Props) {
       </Text>
 
       <TextInput
+        mode="outlined"
         label="Correo electrónico"
         value={email}
         onChangeText={setEmail}
@@ -61,6 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
         style={styles.input}
       />
       <TextInput
+        mode="outlined"
         label="Contraseña"
         value={password}
         onChangeText={setPassword}
@@ -77,16 +87,19 @@ export default function LoginScreen({ navigation }: Props) {
       <Button mode="contained" onPress={handleLogin} loading={loading} style={styles.button}>
         Entrar
       </Button>
-      <Button onPress={() => navigation.navigate('Signup')}>Crear una cuenta</Button>
+      <Button onPress={() => navigation.navigate('Signup')} textColor={colors.accent}>
+        Crear una cuenta
+      </Button>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { textAlign: 'center', marginBottom: 8 },
-  subtitle: { textAlign: 'center', marginBottom: 32, opacity: 0.7 },
+  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.background },
+  logo: { alignSelf: 'center', marginBottom: 12 },
+  title: { textAlign: 'center', marginBottom: 8, color: colors.text },
+  subtitle: { textAlign: 'center', marginBottom: 32, color: colors.textMuted },
   input: { marginBottom: 12 },
   button: { marginTop: 8, marginBottom: 4 },
-  error: { color: '#DC2626', marginBottom: 8, textAlign: 'center' },
+  error: { color: colors.error, marginBottom: 8, textAlign: 'center' },
 });

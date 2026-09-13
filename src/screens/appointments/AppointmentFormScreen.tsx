@@ -16,6 +16,7 @@ import {
 import { getValidAccessToken } from '@/services/googleTokenStore';
 import { createGoogleCalendarEvent, updateGoogleCalendarEvent } from '@/services/googleCalendar';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AppointmentForm'>;
 
@@ -76,7 +77,7 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
       }
       navigation.goBack();
     } catch (e: any) {
-      setError('No se pudo guardar la cita. Intenta de nuevo.');
+      setError(`No se pudo guardar la cita (${e?.code ?? 'error'}): ${e?.message ?? e}`);
     } finally {
       setSaving(false);
     }
@@ -125,8 +126,15 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TextInput label="Título" value={title} onChangeText={setTitle} style={styles.input} />
       <TextInput
+        mode="outlined"
+        label="Título"
+        value={title}
+        onChangeText={setTitle}
+        style={styles.input}
+      />
+      <TextInput
+        mode="outlined"
         label="Descripción"
         value={description}
         onChangeText={setDescription}
@@ -134,6 +142,7 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
         style={styles.input}
       />
       <TextInput
+        mode="outlined"
         label="Lugar"
         value={location}
         onChangeText={setLocation}
@@ -149,7 +158,7 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
         </Text>
       )}
 
-      <Button mode="contained" onPress={handleSave} loading={saving} style={styles.button}>
+      <Button mode="contained" icon="content-save-outline" onPress={handleSave} loading={saving} style={styles.button}>
         Guardar cita
       </Button>
       <Button
@@ -163,7 +172,7 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
       </Button>
 
       {appointmentId && (
-        <Button textColor="#DC2626" onPress={handleDelete} style={styles.button}>
+        <Button icon="delete-outline" textColor={colors.error} onPress={handleDelete} style={styles.button}>
           Eliminar cita
         </Button>
       )}
@@ -172,9 +181,9 @@ export default function AppointmentFormScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 48 },
   input: { marginBottom: 12 },
   button: { marginTop: 8 },
-  error: { color: '#DC2626', marginVertical: 8, textAlign: 'center' },
+  error: { color: colors.error, marginVertical: 8, textAlign: 'center' },
 });

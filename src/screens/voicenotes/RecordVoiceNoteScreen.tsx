@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { uploadVoiceNote } from '@/services/voiceNotes';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RecordVoiceNote'>;
 
@@ -102,7 +103,7 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
       )}
 
       {isRecording && (
-        <Button mode="contained" icon="stop" onPress={stopRecording} buttonColor="#DC2626" style={styles.mainButton}>
+        <Button mode="contained" icon="stop" onPress={stopRecording} buttonColor={colors.error} style={styles.mainButton}>
           Detener
         </Button>
       )}
@@ -110,15 +111,18 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
       {!isRecording && recordedUri && (
         <>
           <TextInput
+            mode="outlined"
             label="Título de la nota (opcional)"
             value={title}
             onChangeText={setTitle}
             style={styles.input}
           />
-          <Button mode="contained" onPress={handleSave} loading={uploading} style={styles.mainButton}>
+          <Button mode="contained" icon="content-save-outline" onPress={handleSave} loading={uploading} style={styles.mainButton}>
             Guardar y transcribir
           </Button>
-          <Button onPress={() => setRecordedUri(null)}>Grabar de nuevo</Button>
+          <Button onPress={() => setRecordedUri(null)} textColor={colors.accent}>
+            Grabar de nuevo
+          </Button>
         </>
       )}
 
@@ -132,9 +136,9 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  timer: { marginBottom: 32, fontVariant: ['tabular-nums'] },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
+  timer: { marginBottom: 32, fontVariant: ['tabular-nums'], color: colors.accent },
   mainButton: { width: '100%', marginTop: 8 },
   input: { width: '100%', marginBottom: 16 },
-  error: { color: '#DC2626', marginTop: 16, textAlign: 'center' },
+  error: { color: colors.error, marginTop: 16, textAlign: 'center' },
 });

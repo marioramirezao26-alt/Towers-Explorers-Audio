@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { colors } from '@/theme';
 
 interface Props {
   label: string;
@@ -38,6 +39,6 @@ export default function DateTimeField({ label, value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { marginTop: 4, marginBottom: 4 },
+  label: { marginTop: 4, marginBottom: 4, color: colors.textMuted },
   dateButton: { marginBottom: 12, alignItems: 'flex-start' },
 });

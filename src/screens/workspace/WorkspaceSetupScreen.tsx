@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button, SegmentedButtons, Text, TextInput } from 'react-native-paper';
 import { useAuth } from '@/contexts/AuthContext';
 import { createWorkspace, joinWorkspaceByInviteCode } from '@/services/workspaces';
+import { colors } from '@/theme';
 
 export default function WorkspaceSetupScreen() {
   const { profile, signOut } = useAuth();
@@ -58,6 +59,7 @@ export default function WorkspaceSetupScreen() {
 
       {mode === 'create' ? (
         <TextInput
+          mode="outlined"
           label="Nombre del espacio (ej. Mi Empresa)"
           value={workspaceName}
           onChangeText={setWorkspaceName}
@@ -65,6 +67,7 @@ export default function WorkspaceSetupScreen() {
         />
       ) : (
         <TextInput
+          mode="outlined"
           label="Código de invitación"
           value={inviteCode}
           onChangeText={setInviteCode}
@@ -82,17 +85,19 @@ export default function WorkspaceSetupScreen() {
       <Button mode="contained" onPress={handleSubmit} loading={loading} style={styles.button}>
         {mode === 'create' ? 'Crear espacio' : 'Unirme'}
       </Button>
-      <Button onPress={signOut}>Cerrar sesión</Button>
+      <Button onPress={signOut} textColor={colors.textMuted}>
+        Cerrar sesión
+      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { textAlign: 'center', marginBottom: 8 },
-  subtitle: { textAlign: 'center', marginBottom: 24, opacity: 0.7 },
+  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.background },
+  title: { textAlign: 'center', marginBottom: 8, color: colors.text },
+  subtitle: { textAlign: 'center', marginBottom: 24, color: colors.textMuted },
   segmented: { marginBottom: 24 },
   input: { marginBottom: 12 },
   button: { marginTop: 8, marginBottom: 4 },
-  error: { color: '#DC2626', marginBottom: 8, textAlign: 'center' },
+  error: { color: colors.error, marginBottom: 8, textAlign: 'center' },
 });

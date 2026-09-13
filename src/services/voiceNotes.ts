@@ -49,19 +49,28 @@ export async function uploadVoiceNote(
     createdAt: Date.now(),
   } as Omit<VoiceNote, 'id'>);
 
-  const storagePath = `workspaces/${workspaceId}/voiceNotes/${docRef.id}.m4a`;
-  const storageRef = ref(storage, storagePath);
+  try {
+    const storagePath = `workspaces/${workspaceId}/voiceNotes/${docRef.id}.m4a`;
+    const storageRef = ref(storage, storagePath);
 
-  const response = await fetch(localUri);
-  const blob = await response.blob();
-  await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
-  const audioUrl = await getDownloadURL(storageRef);
+    const response = await fetch(localUri);
+    const blob = await response.blob();
+    await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
+    const audioUrl = await getDownloadURL(storageRef);
 
-  await updateDoc(docRef, {
-    audioPath: storagePath,
-    audioUrl,
-    status: 'transcribing',
-  });
+    await updateDoc(docRef, {
+      audioPath: storagePath,
+      audioUrl,
+      status: 'transcribing',
+    });
+  } catch (e: any) {
+    // Sin este catch, un fallo aquí dejaba la nota atascada en "Subiendo..." para siempre.
+    await updateDoc(docRef, {
+      status: 'error',
+      transcript: `Error al subir: ${e?.code ?? ''} ${e?.message ?? e}`.trim(),
+    }).catch(() => {});
+    throw e;
+  }
 
   return docRef.id;
 }

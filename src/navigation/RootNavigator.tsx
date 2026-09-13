@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Button } from 'react-native-paper';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,20 @@ import WorkspaceSetupScreen from '@/screens/workspace/WorkspaceSetupScreen';
 import AppointmentFormScreen from '@/screens/appointments/AppointmentFormScreen';
 import RecordVoiceNoteScreen from '@/screens/voicenotes/RecordVoiceNoteScreen';
 import AppTabs from './AppTabs';
+import { colors } from '@/theme';
+
+const navigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: colors.primary,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.text,
+    border: colors.border,
+    notification: colors.accent,
+  },
+};
 
 export type RootStackParamList = {
   Login: undefined;
@@ -25,8 +39,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function LoadingScreen() {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator size="large" color="#4F46E5" />
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.background,
+      }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 }
@@ -47,7 +68,7 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isLoggedIn ? (
           <>
@@ -66,7 +87,11 @@ export default function RootNavigator() {
                 headerShown: true,
                 title: 'Cita',
                 presentation: 'modal',
-                headerLeft: () => <Button onPress={() => navigation.goBack()}>Cerrar</Button>,
+                headerLeft: () => (
+                  <Button icon="close" onPress={() => navigation.goBack()}>
+                    Cerrar
+                  </Button>
+                ),
               })}
             />
             <Stack.Screen
@@ -76,7 +101,11 @@ export default function RootNavigator() {
                 headerShown: true,
                 title: 'Nueva nota de voz',
                 presentation: 'modal',
-                headerLeft: () => <Button onPress={() => navigation.goBack()}>Cerrar</Button>,
+                headerLeft: () => (
+                  <Button icon="close" onPress={() => navigation.goBack()}>
+                    Cerrar
+                  </Button>
+                ),
               })}
             />
           </>

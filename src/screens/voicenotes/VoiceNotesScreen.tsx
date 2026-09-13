@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Card, Chip, FAB, Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,6 +12,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { subscribeToVoiceNotes, deleteVoiceNote } from '@/services/voiceNotes';
 import { VoiceNote } from '@/types';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+import { colors } from '@/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -18,7 +20,14 @@ const STATUS_LABEL: Record<VoiceNote['status'], string> = {
   uploading: 'Subiendo…',
   transcribing: 'Transcribiendo…',
   done: 'Transcrita',
-  error: 'Error al transcribir',
+  error: 'Error',
+};
+
+const STATUS_COLOR: Record<VoiceNote['status'], string> = {
+  uploading: colors.textMuted,
+  transcribing: colors.accent,
+  done: colors.success,
+  error: colors.error,
 };
 
 export default function VoiceNotesScreen() {
@@ -68,7 +77,9 @@ export default function VoiceNotesScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text variant="headlineSmall">Notas de voz</Text>
+        <Text variant="headlineSmall" style={styles.headerTitle}>
+          Notas de voz
+        </Text>
       </View>
 
       <FlatList
@@ -76,16 +87,24 @@ export default function VoiceNotesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>Aún no hay notas. Toca + para grabar una idea.</Text>
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="waveform" size={40} color={colors.textMuted} />
+            <Text style={styles.empty}>Aún no hay notas. Toca + para grabar una idea.</Text>
+          </View>
         }
         renderItem={({ item }) => (
-          <Card style={styles.card}>
+          <Card style={styles.card} mode="contained">
             <Card.Content>
               <View style={styles.rowBetween}>
-                <Text variant="titleMedium" style={styles.grow}>
+                <Text variant="titleMedium" style={[styles.grow, styles.cardTitle]}>
                   {item.title}
                 </Text>
-                <Chip compact icon={item.status === 'done' ? 'check' : undefined}>
+                <Chip
+                  compact
+                  style={{ backgroundColor: STATUS_COLOR[item.status] + '26' }}
+                  textStyle={{ color: STATUS_COLOR[item.status] }}
+                  icon={item.status === 'done' ? 'check' : undefined}
+                >
                   {STATUS_LABEL[item.status]}
                 </Chip>
               </View>
@@ -93,10 +112,13 @@ export default function VoiceNotesScreen() {
                 {format(new Date(item.createdAt), "d 'de' MMMM, HH:mm", { locale: es })}
               </Text>
               {item.status === 'transcribing' && (
-                <ActivityIndicator style={styles.spinner} size="small" />
+                <ActivityIndicator style={styles.spinner} size="small" color={colors.accent} />
               )}
               {item.transcript && (
-                <Text style={styles.transcript} variant="bodyMedium">
+                <Text
+                  style={[styles.transcript, item.status === 'error' && { color: colors.error }]}
+                  variant="bodyMedium"
+                >
                   {item.transcript}
                 </Text>
               )}
@@ -109,7 +131,9 @@ export default function VoiceNotesScreen() {
               >
                 {playingId === item.id ? 'Pausar' : 'Escuchar'}
               </Button>
-              <Button onPress={() => handleDelete(item)}>Eliminar</Button>
+              <Button icon="delete-outline" textColor={colors.error} onPress={() => handleDelete(item)}>
+                Eliminar
+              </Button>
             </Card.Actions>
           </Card>
         )}
@@ -117,6 +141,7 @@ export default function VoiceNotesScreen() {
 
       <FAB
         icon="microphone-plus"
+        color="#FFFFFF"
         style={[styles.fab, { bottom: insets.bottom + 16 }]}
         onPress={() => navigation.navigate('RecordVoiceNote')}
       />
@@ -125,15 +150,18 @@ export default function VoiceNotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16, paddingBottom: 8 },
+  headerTitle: { color: colors.text },
   list: { padding: 16, paddingTop: 0, paddingBottom: 96 },
-  card: { marginBottom: 12 },
+  card: { marginBottom: 12, backgroundColor: colors.surface },
+  cardTitle: { color: colors.text },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   grow: { flex: 1, marginRight: 8 },
-  date: { marginTop: 4, opacity: 0.7 },
+  date: { marginTop: 4, color: colors.textMuted },
   spinner: { alignSelf: 'flex-start', marginTop: 8 },
-  transcript: { marginTop: 10, opacity: 0.85 },
-  empty: { textAlign: 'center', marginTop: 48, opacity: 0.6 },
-  fab: { position: 'absolute', right: 16 },
+  transcript: { marginTop: 10, color: colors.text, opacity: 0.9 },
+  emptyContainer: { alignItems: 'center', marginTop: 48 },
+  empty: { textAlign: 'center', marginTop: 12, color: colors.textMuted },
+  fab: { position: 'absolute', right: 16, backgroundColor: colors.primary },
 });
