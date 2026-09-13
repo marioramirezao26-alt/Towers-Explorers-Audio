@@ -50,8 +50,8 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordedUri(null);
-    } catch (e) {
-      setError('No se pudo iniciar la grabación.');
+    } catch (e: any) {
+      setError(`No se pudo iniciar la grabación: ${e?.message ?? e}`);
     }
   };
 
@@ -82,8 +82,8 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
         durationMillis,
       );
       navigation.goBack();
-    } catch (e) {
-      setError('No se pudo guardar la nota de voz. Revisa tu conexión.');
+    } catch (e: any) {
+      setError(`No se pudo guardar la nota de voz (${e?.code ?? 'error'}): ${e?.message ?? e}`);
     } finally {
       setUploading(false);
     }
