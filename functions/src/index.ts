@@ -52,9 +52,10 @@ export const transcribeVoiceNote = onObjectFinalized(
         transcript: transcription.text,
         status: 'done',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error transcribiendo nota de voz:', error);
-      await noteRef.update({ status: 'error' }).catch(() => {});
+      const detail = error?.response?.data?.error?.message ?? error?.message ?? String(error);
+      await noteRef.update({ status: 'error', transcript: `Error al transcribir: ${detail}` }).catch(() => {});
     } finally {
       fs.promises.unlink(tempFilePath).catch(() => {});
     }
