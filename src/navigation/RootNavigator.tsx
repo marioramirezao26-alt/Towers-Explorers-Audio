@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Button } from 'react-native-paper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import LoginScreen from '@/screens/auth/LoginScreen';
@@ -61,12 +62,22 @@ export default function RootNavigator() {
             <Stack.Screen
               name="AppointmentForm"
               component={AppointmentFormScreen}
-              options={{ headerShown: true, title: 'Cita', presentation: 'modal' }}
+              options={({ navigation }) => ({
+                headerShown: true,
+                title: 'Cita',
+                presentation: 'modal',
+                headerLeft: () => <Button onPress={() => navigation.goBack()}>Cerrar</Button>,
+              })}
             />
             <Stack.Screen
               name="RecordVoiceNote"
               component={RecordVoiceNoteScreen}
-              options={{ headerShown: true, title: 'Nueva nota de voz', presentation: 'modal' }}
+              options={({ navigation }) => ({
+                headerShown: true,
+                title: 'Nueva nota de voz',
+                presentation: 'modal',
+                headerLeft: () => <Button onPress={() => navigation.goBack()}>Cerrar</Button>,
+              })}
             />
           </>
         )}
