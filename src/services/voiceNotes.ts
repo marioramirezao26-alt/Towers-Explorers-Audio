@@ -27,9 +27,9 @@ export function subscribeToVoiceNotes(
 }
 
 /**
- * Sube el audio grabado y crea el registro en Firestore. La transcripción la realiza
- * automáticamente una Cloud Function (ver /functions) cuando detecta el archivo nuevo
- * en Storage, y luego actualiza este mismo documento con el texto y status = 'done'.
+ * Sube el audio grabado y crea el registro en Firestore. La transcripción automática
+ * (Cloud Function en /functions, usa Whisper de OpenAI) está desactivada por ahora
+ * — la nota queda marcada como 'done' apenas termina de subirse, sin transcript.
  */
 export async function uploadVoiceNote(
   workspaceId: string,
@@ -61,7 +61,7 @@ export async function uploadVoiceNote(
     await updateDoc(docRef, {
       audioPath: storagePath,
       audioUrl,
-      status: 'transcribing',
+      status: 'done',
     });
   } catch (e: any) {
     // Sin este catch, un fallo aquí dejaba la nota atascada en "Subiendo..." para siempre.

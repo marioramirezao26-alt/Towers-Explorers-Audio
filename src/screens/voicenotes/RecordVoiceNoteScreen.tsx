@@ -118,7 +118,7 @@ export default function RecordVoiceNoteScreen({ navigation }: Props) {
             style={styles.input}
           />
           <Button mode="contained" icon="content-save-outline" onPress={handleSave} loading={uploading} style={styles.mainButton}>
-            Guardar y transcribir
+            Guardar nota
           </Button>
           <Button onPress={() => setRecordedUri(null)} textColor={colors.accent}>
             Grabar de nuevo

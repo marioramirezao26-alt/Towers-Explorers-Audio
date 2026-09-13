@@ -19,7 +19,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const STATUS_LABEL: Record<VoiceNote['status'], string> = {
   uploading: 'Subiendo…',
   transcribing: 'Transcribiendo…',
-  done: 'Transcrita',
+  done: 'Lista',
   error: 'Error',
 };
 
