@@ -32,10 +32,10 @@ export default function LoginScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text variant="headlineMedium" style={styles.title}>
-        Tu mano derecha
+        Gaby
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Agenda citas y captura tus ideas de voz, junto a tu socio.
+        Tu mano derecha: agenda citas y captura tus ideas de voz, junto a tu socio.
       </Text>
 
       <TextInput

@@ -1,4 +1,4 @@
-# Socio Assistant
+# Gaby
 
 Tu "mano derecha" digital, compartida entre tú y tu socio, para el celular. Permite:
 

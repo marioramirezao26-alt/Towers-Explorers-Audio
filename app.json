@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "Socio Assistant",
-    "slug": "socio-assistant",
+    "name": "Gaby",
+    "slug": "gaby",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "scheme": "socioassistant",
+    "scheme": "gaby",
     "backgroundColor": "#0F172A",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.socioassistant.app",
+      "bundleIdentifier": "com.gaby.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Necesitamos el micrófono para grabar tus notas de voz."
       }
     },
     "android": {
-      "package": "com.socioassistant.app",
+      "package": "com.gaby.app",
       "permissions": ["RECORD_AUDIO"]
     },
     "web": {
