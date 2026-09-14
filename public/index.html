@@ -12,6 +12,14 @@
     <meta name="apple-mobile-web-app-title" content="Gaby" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#4F46E5" />
+
+    <!-- Consola de depuración visible en el celular: visita la app con ?debug=1 al final de la URL -->
+    <script>
+      if (location.search.indexOf('debug=1') !== -1) {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/eruda"><\/script>');
+        document.write('<script>eruda.init();<\/script>');
+      }
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
