@@ -4,7 +4,13 @@ import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveGoogleTokens } from '@/services/googleTokenStore';
 
-WebBrowser.maybeCompleteAuthSession();
+try {
+  WebBrowser.maybeCompleteAuthSession();
+} catch (e) {
+  // Safari en modo privado (o restricciones de almacenamiento) puede lanzar aquí;
+  // no debe tumbar toda la pantalla por una función secundaria como Google Calendar.
+  console.warn('maybeCompleteAuthSession falló:', e);
+}
 
 const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
