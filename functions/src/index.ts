@@ -9,6 +9,8 @@ import OpenAI from 'openai';
 
 initializeApp();
 
+export { chatWithGaby } from './chat';
+
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
 // Coincide con el path que usa uploadVoiceNote() en la app:

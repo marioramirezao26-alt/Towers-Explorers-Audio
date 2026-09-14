@@ -75,6 +75,28 @@ storage.rules                Reglas de seguridad de Storage
 
 Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4a`, la función `transcribeVoiceNote` se dispara sola, transcribe con Whisper y actualiza el documento en Firestore con el texto.
 
+## 3.1 Configurar el asistente de chat (Grok / xAI)
+
+La pestaña "Asistente" le permite a cualquiera de los dos escribirle a Gaby en lenguaje natural (ej. "agéndame una reunión con Juan el viernes a las 3pm") y ella crea la cita sola usando Grok.
+
+1. Crea una cuenta y una API key en [console.x.ai](https://console.x.ai/).
+2. Guárdala como secreto:
+
+   ```bash
+   firebase functions:secrets:set XAI_API_KEY
+   ```
+
+3. Despliega (o vuelve a desplegar) las funciones:
+
+   ```bash
+   cd functions
+   npm install
+   cd ..
+   firebase deploy --only functions
+   ```
+
+El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `GROK_MODEL`) — si xAI lanza un modelo más nuevo, solo cambia ese valor y vuelve a desplegar.
+
 ## 4. Configurar el login de Google Calendar
 
 1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (mismo proyecto que Firebase), configura la **pantalla de consentimiento OAuth** (tipo "Externo", agrega tu correo y el de tu socio como *test users* mientras esté en modo prueba).

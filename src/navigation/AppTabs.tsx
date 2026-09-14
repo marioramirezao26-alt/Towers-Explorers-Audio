@@ -4,12 +4,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppointmentsScreen from '@/screens/appointments/AppointmentsScreen';
 import VoiceNotesScreen from '@/screens/voicenotes/VoiceNotesScreen';
 import HomeScreen from '@/screens/home/HomeScreen';
+import AssistantScreen from '@/screens/assistant/AssistantScreen';
 import { colors } from '@/theme';
 
 export type AppTabsParamList = {
   Home: undefined;
   Appointments: undefined;
   VoiceNotes: undefined;
+  Assistant: undefined;
 };
 
 const Tab = createBottomTabNavigator<AppTabsParamList>();
@@ -63,6 +65,20 @@ export default function AppTabs() {
           tabBarIcon: ({ color, size, focused }) => (
             <MaterialCommunityIcons
               name={focused ? 'waveform' : 'microphone-outline'}
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Assistant"
+        component={AssistantScreen}
+        options={{
+          title: 'Asistente',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'robot' : 'robot-outline'}
               color={color}
               size={size}
             />

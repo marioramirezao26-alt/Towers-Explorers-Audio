@@ -48,3 +48,11 @@ export interface GoogleTokens {
   expiresAt: number; // epoch ms
   refreshToken?: string;
 }
+
+export interface AssistantMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdBy: string; // uid, o 'gaby' para las respuestas del asistente
+  createdAt: number;
+}

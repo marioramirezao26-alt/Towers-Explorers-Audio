@@ -38,6 +38,13 @@ service cloud.firestore {
       match /voiceNotes/{noteId} {
         allow read, write: if isMember(workspaceId);
       }
+
+      match /assistantMessages/{messageId} {
+        // Solo la Cloud Function (Admin SDK, que ignora estas reglas) escribe aquí;
+        // el cliente únicamente lee la conversación.
+        allow read: if isMember(workspaceId);
+        allow write: if false;
+      }
     }
   }
 }
