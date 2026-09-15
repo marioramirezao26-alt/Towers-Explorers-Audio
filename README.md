@@ -156,7 +156,7 @@ Si tu iPhone y tu PC no logran conectarse por WiFi/túnel para usar Expo Go (fir
 
 4. En tu iPhone, abre esa URL en **Safari** (no en Chrome, tiene que ser Safari) → toca el ícono de **Compartir** (el cuadrito con la flecha) → **"Agregar a inicio"**. Te va a quedar un ícono de "Gaby" en tu pantalla de inicio que abre directo, sin la barra del navegador.
 
-Cada vez que hagamos cambios a la app, solo necesitas correr `npm run deploy:web` de nuevo y refrescar la página en tu iPhone.
+Cada vez que hagamos cambios a la app, solo necesitas correr `npm run deploy:web` de nuevo — **no hay que desinstalar ni reinstalar nada**. La app instalada (en iPhone o Android) siempre carga la página más reciente cada vez que la abres; solo cierra la app del todo (no dejarla en segundo plano) y vuelve a abrirla para asegurarte de que tome la versión nueva.
 
 ## 7. Generar una app instalable nativa (opcional, más adelante)
 
