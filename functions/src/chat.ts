@@ -5,6 +5,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
+// Cerebro de Gaby: Claude (Anthropic). Si el código de esta constante cambia,
+// forzamos a Firebase a redesplegar esta función aunque crea que "no hay cambios".
 const MODEL = 'claude-opus-5';
 
 const CREATE_APPOINTMENT_TOOL: Anthropic.Tool = {
