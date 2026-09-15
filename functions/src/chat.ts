@@ -56,7 +56,9 @@ function systemPrompt(): string {
     'decide sola. Interpreta fechas relativas ("mañana", "el viernes", "en dos horas") respecto ' +
     'a la fecha y hora actual que se te da abajo, y usa formato ISO 8601 sin zona horaria para ' +
     `startTime/endTime. La fecha y hora actual es ${new Date().toISOString()}. ` +
-    'Responde siempre en español, de forma breve, natural y cálida.'
+    'Responde siempre en español, de forma breve, natural y cálida, en texto plano — tus ' +
+    'respuestas se leen en voz alta, así que nunca uses markdown (nada de **negritas**, ' +
+    '_cursivas_, `código`, encabezados con #, ni listas con guiones o asteriscos).'
   );
 }
 

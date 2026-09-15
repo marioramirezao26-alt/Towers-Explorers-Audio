@@ -26,11 +26,24 @@ function pickBestVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynt
   return [...spanish].sort((a, b) => score(b) - score(a))[0];
 }
 
-/** Quita emojis del texto antes de hablarlo — algunos motores de voz intentan "leerlos". */
-function stripEmojis(text: string): string {
+/**
+ * Limpia el texto antes de hablarlo: quita emojis y símbolos de formato markdown
+ * (**negrita**, _cursiva_, `código`, # encabezados, listas con - o *) que la voz
+ * de otra forma leería literalmente ("asterisco asterisco...").
+ */
+function sanitizeForSpeech(text: string): string {
   return text
     .replace(/\p{Extended_Pictographic}/gu, '')
     .replace(/️/g, '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/[*_#`]/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
@@ -52,7 +65,7 @@ export function useSpeak() {
 
   const speak = useCallback(
     (text: string, opts?: SpeakOptions) => {
-      const clean = stripEmojis(text);
+      const clean = sanitizeForSpeech(text);
       if (!supported || !clean) {
         opts?.onEnd?.();
         return;
