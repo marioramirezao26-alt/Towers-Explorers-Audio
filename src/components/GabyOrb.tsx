@@ -31,6 +31,9 @@ interface Props {
   /** Fuerza una emoción concreta (ej. error de micrófono) por encima de la que dictaría `state`. */
   emotionOverride?: Emotion;
   size?: number;
+  /** -1..1: cómo inclinas el celular de verdad (sensor de orientación), de useDeviceTilt(). */
+  tiltX?: Animated.Value;
+  tiltY?: Animated.Value;
 }
 
 /** Rostro (cejas, ojos y boca) de Gaby para cada emoción, sobre la cabeza (cx=100, cy=100). */
@@ -122,12 +125,15 @@ function Face({ emotion }: { emotion: Emotion }) {
  * y gira suavemente todo el tiempo, con anillos de luz y expresiones propias por emoción.
  * Íntegramente vectorial (SVG) para que se vea nítida en cualquier tamaño.
  */
-export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
+export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
   const pulse = useRef(new Animated.Value(0)).current;
   const drift = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
   const turn = useRef(new Animated.Value(0)).current;
+  const fallbackTilt = useRef(new Animated.Value(0)).current;
+  const deviceTiltX = tiltX ?? fallbackTilt;
+  const deviceTiltY = tiltY ?? fallbackTilt;
 
   useEffect(() => {
     pulse.setValue(0);
@@ -196,6 +202,10 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
   const turnRotate = turn.interpolate({ inputRange: [-1, 1], outputRange: ['-5deg', '5deg'] });
   const turnScaleX = turn.interpolate({ inputRange: [-1, 1], outputRange: [0.92, 1.08] });
   const turnTranslateX = turn.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
+  // Se suma al giro ambiental: cómo inclinas el celular de verdad (sensor de orientación).
+  const deviceRotate = deviceTiltX.interpolate({ inputRange: [-1, 1], outputRange: ['-9deg', '9deg'] });
+  const deviceTranslateX = deviceTiltX.interpolate({ inputRange: [-1, 1], outputRange: [-12, 12] });
+  const deviceTranslateY = deviceTiltY.interpolate({ inputRange: [-1, 1], outputRange: [-10, 10] });
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -220,12 +230,13 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
       <Animated.View
         style={{
           transform: [
-            { translateY: floatY },
-            { translateX: turnTranslateX },
+            { translateY: Animated.add(floatY, deviceTranslateY) },
+            { translateX: Animated.add(turnTranslateX, deviceTranslateX) },
             { scale: coreScale },
             { scaleX: turnScaleX },
             { rotate },
             { rotate: turnRotate },
+            { rotate: deviceRotate },
           ],
         }}
       >

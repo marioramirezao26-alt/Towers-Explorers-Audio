@@ -8,6 +8,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { sendAssistantMessage, subscribeToAssistantMessages } from '@/services/assistant';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useSpeak } from '@/hooks/useSpeak';
+import { useDeviceTilt } from '@/hooks/useDeviceTilt';
 import { AssistantMessage } from '@/types';
 import { colors, glow } from '@/theme';
 import GabyOrb, { Emotion, OrbState } from '@/components/GabyOrb';
@@ -42,6 +43,7 @@ export default function AssistantScreen() {
   const listRef = useRef<FlatList>(null);
   const sendingRef = useRef(false);
   const { speak, cancel: cancelSpeech, supported: speechSupported } = useSpeak();
+  const { tiltX: deviceTiltX, tiltY: deviceTiltY, requestPermission: requestTiltPermission } = useDeviceTilt();
 
   const handleSendText = async (text: string) => {
     if (!workspace || !text.trim() || sendingRef.current) return;
@@ -99,6 +101,7 @@ export default function AssistantScreen() {
       wakeWord.stop();
     } else {
       wakeWord.start();
+      requestTiltPermission();
     }
   };
 
@@ -166,7 +169,13 @@ export default function AssistantScreen() {
         </Text>
 
         <View style={styles.avatarArea}>
-          <GabyOrb state={orbState} emotionOverride={emotionOverride} size={190} />
+          <GabyOrb
+            state={orbState}
+            emotionOverride={emotionOverride}
+            size={190}
+            tiltX={deviceTiltX}
+            tiltY={deviceTiltY}
+          />
         </View>
 
         <View style={styles.transcriptWrap}>
