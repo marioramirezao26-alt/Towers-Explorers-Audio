@@ -106,6 +106,13 @@ En la pestaña Asistente, toca el ícono de micrófono para activar el modo de v
 
 Mientras el modo de voz está activo, la pantalla no se apaga sola (usa la Screen Wake Lock API del navegador) — así el micrófono sigue escuchando sin que el celular se bloquee. Si el navegador no soporta esa API, simplemente no se aplica, sin afectar el resto de la app.
 
+### Un cuerpo físico para Gaby (Stack-chan)
+
+`stackchan-firmware/` tiene el firmware de un Stack-chan (M5Stack Core2 + cuello
+de 2 servos) que le habla al backend de Gaby a través de la Cloud Function
+`deviceCommand` — ver el `README.md` de esa carpeta para la guía de armado y
+configuración completa.
+
 ## 4. Configurar el login de Google Calendar
 
 1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (mismo proyecto que Firebase), configura la **pantalla de consentimiento OAuth** (tipo "Externo", agrega tu correo y el de tu socio como *test users* mientras esté en modo prueba).
