@@ -10,7 +10,7 @@ import { useWakeWord } from '@/hooks/useWakeWord';
 import { useSpeak } from '@/hooks/useSpeak';
 import { AssistantMessage } from '@/types';
 import { colors, glow } from '@/theme';
-import GabyOrb, { OrbState } from '@/components/GabyOrb';
+import GabyOrb, { Emotion, OrbState } from '@/components/GabyOrb';
 import StarField from '@/components/StarField';
 
 const TITLE_LABEL: Record<string, string> = {
@@ -120,6 +120,15 @@ export default function AssistantScreen() {
     ? 'listening'
     : 'idle';
 
+  // Emociones que reemplazan a la de `orbState` cuando algo sale mal.
+  const emotionOverride: Emotion | undefined = error
+    ? 'tristeza'
+    : wakeWord.status === 'error'
+    ? 'enojo'
+    : wakeWord.status === 'unsupported'
+    ? 'confundido'
+    : undefined;
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={['#050712', '#0B0E17', '#0B0E17']} style={StyleSheet.absoluteFill} />
@@ -157,7 +166,7 @@ export default function AssistantScreen() {
         </Text>
 
         <View style={styles.avatarArea}>
-          <GabyOrb state={orbState} size={190} />
+          <GabyOrb state={orbState} emotionOverride={emotionOverride} size={190} />
         </View>
 
         <View style={styles.transcriptWrap}>
