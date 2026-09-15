@@ -96,6 +96,16 @@ function extractText(content: Anthropic.ContentBlock[]): string | null {
   return block?.text ?? null;
 }
 
+/**
+ * Por seguridad: nunca guardar ni mostrar una API key si por algún motivo terminara
+ * dentro de un mensaje de error (ej. un cliente HTTP de bajo nivel que la incluya).
+ */
+function redactSecrets(text: string): string {
+  return text
+    .replace(/sk-[A-Za-z0-9_-]{10,}/g, 'sk-***')
+    .replace(/Bearer\s+[A-Za-z0-9._-]{10,}/gi, 'Bearer ***');
+}
+
 async function runTool(
   block: Anthropic.ToolUseBlock,
   workspaceRef: FirebaseFirestore.DocumentReference,
@@ -266,9 +276,9 @@ export const chatWithGaby = onCall(
       } else if (error instanceof Anthropic.RateLimitError) {
         finalText = 'No pude responder: se alcanzó el límite de uso, intenta en un momento.';
       } else if (error instanceof Anthropic.APIError) {
-        finalText = `No pude responder (${error.status}): ${error.message}`;
+        finalText = redactSecrets(`No pude responder (${error.status}): ${error.message}`);
       } else {
-        finalText = `No pude responder: ${(error as Error)?.message ?? error}`;
+        finalText = redactSecrets(`No pude responder: ${(error as Error)?.message ?? error}`);
       }
     }
 

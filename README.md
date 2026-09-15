@@ -3,7 +3,7 @@
 Tu "mano derecha" digital, compartida entre tú y tu socio, para el celular. Permite:
 
 - 📅 **Agendar citas** en un espacio de trabajo compartido, con sincronización opcional a Google Calendar.
-- 🎙️ **Grabar notas de voz** que se transcriben automáticamente a texto (usando Whisper de OpenAI).
+- 🎙️ **Grabar notas de voz** para escucharlas cuando quieras (sin transcripción automática — se desactivó por seguridad y costo, ver nota abajo).
 - 🤝 **Trabajo en equipo**: tú y tu socio se unen al mismo espacio de trabajo con un código de invitación y ven todo en tiempo real.
 
 App construida con **Expo (React Native)** + **Firebase** (Auth, Firestore, Storage, Cloud Functions).
@@ -25,7 +25,7 @@ src/
     voicenotes/              Lista y grabación de notas de voz
   services/                  Firestore/Storage/Google Calendar (lógica de datos)
   types/                     Tipos TypeScript compartidos
-functions/                   Cloud Function que transcribe el audio automáticamente
+functions/                   Cloud Functions (el "cerebro" de Gaby, chatWithGaby con Claude)
 firestore.rules              Reglas de seguridad de Firestore
 storage.rules                Reglas de seguridad de Storage
 ```
@@ -35,7 +35,6 @@ storage.rules                Reglas de seguridad de Storage
 - Node.js 18+ y npm
 - Una cuenta de [Firebase](https://console.firebase.google.com/)
 - Una cuenta de [Google Cloud Console](https://console.cloud.google.com/) (para el login de Google Calendar; el mismo proyecto de Firebase ya cuenta como proyecto de Google Cloud)
-- Una API key de [OpenAI](https://platform.openai.com/) (para transcribir las notas de voz con Whisper)
 - La app [Expo Go](https://expo.dev/go) instalada en tu celular (para probar rápido) o [EAS CLI](https://docs.expo.dev/eas/) si luego quieres generar un `.apk`/`.ipa` instalable
 
 ## 2. Configurar Firebase
@@ -55,25 +54,9 @@ storage.rules                Reglas de seguridad de Storage
    firebase deploy --only firestore:rules,storage:rules
    ```
 
-## 3. Configurar la transcripción automática (Cloud Function + OpenAI)
+## 3. Notas de voz sin transcripción automática
 
-1. Obtén una API key en [platform.openai.com](https://platform.openai.com/api-keys).
-2. Guárdala como secreto de Firebase Functions:
-
-   ```bash
-   firebase functions:secrets:set OPENAI_API_KEY
-   ```
-
-3. Instala dependencias y despliega la función:
-
-   ```bash
-   cd functions
-   npm install
-   cd ..
-   firebase deploy --only functions
-   ```
-
-Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4a`, la función `transcribeVoiceNote` se dispara sola, transcribe con Whisper y actualiza el documento en Firestore con el texto.
+Las notas de voz se grababan y transcribían con Whisper de OpenAI, pero esa función (`transcribeVoiceNote`) se quitó del proyecto: costaba dinero y, además, un secreto mal configurado llegó a filtrar la API key completa dentro de un mensaje de error guardado en Firestore (visible en la propia app). Por ahora las notas de voz solo se graban y se escuchan — si más adelante quieres reactivar la transcripción, hazlo con un proveedor que sanitice bien sus errores antes de guardarlos.
 
 ## 3.1 Configurar el asistente de chat (Claude)
 

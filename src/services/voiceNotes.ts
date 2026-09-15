@@ -27,9 +27,8 @@ export function subscribeToVoiceNotes(
 }
 
 /**
- * Sube el audio grabado y crea el registro en Firestore. La transcripción automática
- * (Cloud Function en /functions, usa Whisper de OpenAI) está desactivada por ahora
- * — la nota queda marcada como 'done' apenas termina de subirse, sin transcript.
+ * Sube el audio grabado y crea el registro en Firestore. No hay transcripción
+ * automática — la nota queda marcada como 'done' apenas termina de subirse, sin transcript.
  */
 export async function uploadVoiceNote(
   workspaceId: string,
