@@ -99,28 +99,7 @@ El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `MO
 
 ### Comandos de voz ("Hey Gaby")
 
-En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, di **"Gaby"** seguido de tu pedido (o solo "Gaby" y luego espera a que te pregunte) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) para escuchar — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android.
-
-### Voz humana (ElevenLabs)
-
-Para que Gaby responda con una voz realista en vez de la del navegador:
-
-1. Crea una cuenta y un plan de pago en [elevenlabs.io](https://elevenlabs.io/) y copia tu API key.
-2. Guárdala como secreto:
-
-   ```bash
-   firebase functions:secrets:set ELEVENLABS_API_KEY
-   ```
-
-3. (Opcional) Si quieres usar una voz específica de tu cuenta de ElevenLabs en vez de la voz multilingüe por defecto, copia su Voice ID y guárdalo también:
-
-   ```bash
-   firebase functions:secrets:set ELEVENLABS_VOICE_ID
-   ```
-
-4. Despliega las funciones (`cd functions && npm install && cd .. && firebase deploy --only functions`).
-
-Si ElevenLabs falla por cualquier motivo (sin secreto configurado, sin cuota, sin internet), Gaby cae automáticamente de vuelta a la voz del navegador — nunca se queda muda.
+En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, di **"Gaby"** seguido de tu pedido (o solo "Gaby" y luego espera a que te pregunte) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) tanto para escuchar como para hablar — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android. Gaby elige automáticamente la mejor voz en español que ofrezca tu dispositivo/navegador.
 
 ## 4. Configurar el login de Google Calendar
 
