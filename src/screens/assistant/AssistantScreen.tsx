@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { IconButton, Text, TextInput } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,11 +35,13 @@ export default function AssistantScreen() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceReplies, setVoiceReplies] = useState(true);
+  const [showChat, setShowChat] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
   const sendingRef = useRef(false);
@@ -165,56 +167,18 @@ export default function AssistantScreen() {
             iconColor={wakeWord.enabled ? colors.accent : colors.textMuted}
             onPress={toggleVoiceMode}
           />
+          <IconButton
+            icon={showChat ? 'message-text' : 'message-text-outline'}
+            mode="contained"
+            containerColor="rgba(255,255,255,0.06)"
+            iconColor={showChat ? colors.accent : colors.textMuted}
+            onPress={() => setShowChat((v) => !v)}
+          />
         </View>
 
         <Text style={styles.statusText} numberOfLines={1}>
           {STATUS_LABEL[wakeWord.status] ?? STATUS_LABEL.idle}
         </Text>
-
-        <View style={styles.avatarArea}>
-          <GabyOrb
-            state={orbState}
-            emotionOverride={emotionOverride}
-            size={190}
-            tiltX={deviceTiltX}
-            tiltY={deviceTiltY}
-          />
-        </View>
-
-        <View style={styles.transcriptWrap}>
-          <LinearGradient
-            colors={['rgba(11,14,23,0)', 'rgba(11,14,23,0.85)', colors.background]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                Hola, soy Gaby. Escríbeme o dime "Gaby" — por ejemplo: "agéndame una reunión con
-                Juan el viernes a las 3pm" o "apunta que hay que comprar cemento".
-              </Text>
-            }
-            renderItem={({ item }) => {
-              const isUser = item.role === 'user';
-              return (
-                <View style={styles.messageRow}>
-                  <Text style={[styles.messageLabel, isUser && styles.messageLabelUser]}>
-                    {isUser ? (profile?.displayName?.split(' ')[0]?.toUpperCase() ?? 'TÚ') : 'GABY'}
-                  </Text>
-                  <Text
-                    style={[styles.messageText, isUser && styles.messageTextUser, glow(isUser ? colors.primary : colors.accent, 6, 0.15) as any]}
-                  >
-                    {item.content}
-                  </Text>
-                </View>
-              );
-            }}
-          />
-        </View>
 
         {error && (
           <Text style={styles.error} variant="bodySmall">
@@ -222,31 +186,80 @@ export default function AssistantScreen() {
           </Text>
         )}
 
-        <View style={[styles.inputRow, { paddingBottom: insets.bottom + 12 }]}>
-          <TextInput
-            mode="flat"
-            style={styles.input}
-            contentStyle={styles.inputContent}
-            underlineColor="transparent"
-            activeUnderlineColor="transparent"
-            placeholder="Háblale a Gaby…"
-            placeholderTextColor={colors.textMuted}
-            textColor={colors.text}
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={handleSendPress}
-            disabled={!profile || !workspace}
-          />
-          <IconButton
-            icon="send"
-            mode="contained"
-            containerColor={colors.primary}
-            iconColor="#FFFFFF"
-            disabled={!input.trim() || sending}
-            onPress={handleSendPress}
-            style={glow(colors.primary, 10, 0.5)}
+        <View style={styles.avatarArea}>
+          <GabyOrb
+            state={orbState}
+            emotionOverride={emotionOverride}
+            size={showChat ? 190 : Math.min(windowWidth * 0.82, 380)}
+            tiltX={deviceTiltX}
+            tiltY={deviceTiltY}
           />
         </View>
+
+        {showChat && (
+          <>
+            <View style={styles.transcriptWrap}>
+              <LinearGradient
+                colors={['rgba(11,14,23,0)', 'rgba(11,14,23,0.85)', colors.background]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <FlatList
+                ref={listRef}
+                data={messages}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.list}
+                ListEmptyComponent={
+                  <Text style={styles.empty}>
+                    Hola, soy Gaby. Escríbeme o dime "Gaby" — por ejemplo: "agéndame una reunión con
+                    Juan el viernes a las 3pm" o "apunta que hay que comprar cemento".
+                  </Text>
+                }
+                renderItem={({ item }) => {
+                  const isUser = item.role === 'user';
+                  return (
+                    <View style={styles.messageRow}>
+                      <Text style={[styles.messageLabel, isUser && styles.messageLabelUser]}>
+                        {isUser ? (profile?.displayName?.split(' ')[0]?.toUpperCase() ?? 'TÚ') : 'GABY'}
+                      </Text>
+                      <Text
+                        style={[styles.messageText, isUser && styles.messageTextUser, glow(isUser ? colors.primary : colors.accent, 6, 0.15) as any]}
+                      >
+                        {item.content}
+                      </Text>
+                    </View>
+                  );
+                }}
+              />
+            </View>
+
+            <View style={[styles.inputRow, { paddingBottom: insets.bottom + 12 }]}>
+              <TextInput
+                mode="flat"
+                style={styles.input}
+                contentStyle={styles.inputContent}
+                underlineColor="transparent"
+                activeUnderlineColor="transparent"
+                placeholder="Háblale a Gaby…"
+                placeholderTextColor={colors.textMuted}
+                textColor={colors.text}
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={handleSendPress}
+                disabled={!profile || !workspace}
+              />
+              <IconButton
+                icon="send"
+                mode="contained"
+                containerColor={colors.primary}
+                iconColor="#FFFFFF"
+                disabled={!input.trim() || sending}
+                onPress={handleSendPress}
+                style={glow(colors.primary, 10, 0.5)}
+              />
+            </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </View>
   );

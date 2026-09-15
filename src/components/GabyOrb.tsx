@@ -24,7 +24,12 @@ const EMOTION_META: Record<Emotion, { colors: [string, string]; speed: number }>
   confundido: { colors: [colors.accent, colors.textMuted], speed: 2000 },
 };
 
-const INK = '#0B0E17';
+// Paleta "humana" del rostro (independiente del color del aro holográfico, que sigue
+// usando los tonos de marca según la emoción).
+const LINE = '#3B2A1E'; // cejas, párpados
+const PUPIL = '#1A1108';
+const IRIS = '#5B3A29';
+const LIP = '#B5615A';
 
 interface Props {
   state: OrbState;
@@ -36,49 +41,72 @@ interface Props {
   tiltY?: Animated.Value;
 }
 
-/** Rostro (cejas, ojos y boca) de Gaby para cada emoción, sobre la cabeza (cx=100, cy=100). */
+/** Ojo "realista": esclerótica blanca + iris + pupila + brillo, para las emociones con ojos abiertos. */
+function Eye({ cx, cy, rx = 7.2, ry = 5.4, lookY = 0 }: { cx: number; cy: number; rx?: number; ry?: number; lookY?: number }) {
+  return (
+    <>
+      <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#FBF6F0" />
+      <Circle cx={cx} cy={cy + lookY} r={ry * 0.76} fill={IRIS} />
+      <Circle cx={cx} cy={cy + lookY} r={ry * 0.34} fill={PUPIL} />
+      <Circle cx={cx - rx * 0.24} cy={cy + lookY - ry * 0.3} r={ry * 0.16} fill="#FFFFFF" opacity={0.9} />
+      <Path
+        d={`M${cx - rx} ${cy - ry * 0.1} Q${cx} ${cy - ry * 1.6} ${cx + rx} ${cy - ry * 0.1}`}
+        stroke={LINE}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.75}
+      />
+    </>
+  );
+}
+
+/** Rostro (cejas, ojos y boca) de Gaby para cada emoción, sobre la cabeza (cx=100, cy=106). */
 function Face({ emotion }: { emotion: Emotion }) {
   switch (emotion) {
     case 'feliz':
       return (
         <>
-          <Path d="M79 78 Q86 74 93 77" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M107 77 Q114 74 121 78" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M80 91 Q86 85 92 91" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Path d="M108 91 Q114 85 120 91" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Path d="M82 112 Q100 132 118 112" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Circle cx={72} cy={104} r={3} fill={colors.success} opacity={0.45} />
-          <Circle cx={128} cy={104} r={3} fill={colors.success} opacity={0.45} />
+          <Path d="M79 84 Q86 79 93 83" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M107 83 Q114 79 121 84" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M80 97 Q86 91 92 97" stroke={LINE} strokeWidth={2.8} strokeLinecap="round" fill="none" opacity={0.9} />
+          <Path d="M108 97 Q114 91 120 97" stroke={LINE} strokeWidth={2.8} strokeLinecap="round" fill="none" opacity={0.9} />
+          <Path d="M81 120 Q100 140 119 120 Q100 130 81 120 Z" fill="#FFFFFF" opacity={0.85} />
+          <Path d="M81 120 Q100 140 119 120" stroke={LIP} strokeWidth={3} strokeLinecap="round" fill="none" />
+          <Circle cx={70} cy={112} r={4} fill="#E8836F" opacity={0.35} />
+          <Circle cx={130} cy={112} r={4} fill="#E8836F" opacity={0.35} />
         </>
       );
     case 'enojo':
       return (
         <>
-          <Path d="M78 76 L94 85" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
-          <Path d="M122 76 L106 85" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
-          <Ellipse cx={86} cy={94} rx={3} ry={2} fill={INK} opacity={0.85} />
-          <Ellipse cx={114} cy={94} rx={3} ry={2} fill={INK} opacity={0.85} />
-          <Path d="M84 123 Q100 113 116 123" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M77 82 L94 91" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
+          <Path d="M123 82 L106 91" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
+          <Ellipse cx={86} cy={100} rx={4.5} ry={2.4} fill={IRIS} opacity={0.9} />
+          <Ellipse cx={114} cy={100} rx={4.5} ry={2.4} fill={IRIS} opacity={0.9} />
+          <Path d="M83 129 Q100 118 117 129" stroke={LIP} strokeWidth={3.2} strokeLinecap="round" fill="none" />
         </>
       );
     case 'tristeza':
       return (
         <>
-          <Path d="M79 83 Q86 77 93 76" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M107 76 Q114 77 121 83" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M80 93 Q86 98 92 93" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
-          <Path d="M108 93 Q114 98 120 93" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
-          <Path d="M114 99 q-2.4 5 0 8 q2.4 -3 0 -8" fill={colors.accent} opacity={0.75} />
-          <Path d="M88 120 Q100 114 112 120" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M78 89 Q86 82 94 81" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M106 81 Q114 82 122 89" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Eye cx={86} cy={101} rx={6.6} ry={4.6} lookY={1.4} />
+          <Eye cx={114} cy={101} rx={6.6} ry={4.6} lookY={1.4} />
+          <Path d="M78 97 Q86 93 94 97" stroke="#F3C9A2" strokeWidth={5} strokeLinecap="round" fill="none" opacity={0.9} />
+          <Path d="M106 97 Q114 93 122 97" stroke="#F3C9A2" strokeWidth={5} strokeLinecap="round" fill="none" opacity={0.9} />
+          <Path d="M119 106 q-2.6 5.5 0 8.8 q2.6 -3.3 0 -8.8" fill={colors.accent} opacity={0.8} />
+          <Path d="M85 129 Q100 122 115 129" stroke={LIP} strokeWidth={2.8} strokeLinecap="round" fill="none" />
         </>
       );
     case 'mareado':
       return (
         <>
-          <Path d="M80 80 Q86 78 92 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
-          <Path d="M108 80 Q114 78 120 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
+          <Path d="M80 86 Q86 84 92 86" stroke={LINE} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.35} />
+          <Path d="M108 86 Q114 84 120 86" stroke={LINE} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.35} />
           <Path
-            d="M86 85 C92 85 93 91 88 93 C85 94.3 81.5 92 82.5 89 C83.3 86.6 86.5 86 87.5 88"
+            d="M86 91 C92 91 93 97 88 99 C85 100.3 81.5 98 82.5 95 C83.3 92.6 86.5 92 87.5 94"
             stroke={colors.primary}
             strokeWidth={2.1}
             strokeLinecap="round"
@@ -86,44 +114,44 @@ function Face({ emotion }: { emotion: Emotion }) {
             opacity={0.95}
           />
           <Path
-            d="M114 85 C108 85 107 91 112 93 C115 94.3 118.5 92 117.5 89 C116.7 86.6 113.5 86 112.5 88"
+            d="M114 91 C108 91 107 97 112 99 C115 100.3 118.5 98 117.5 95 C116.7 92.6 113.5 92 112.5 94"
             stroke={colors.primary}
             strokeWidth={2.1}
             strokeLinecap="round"
             fill="none"
             opacity={0.95}
           />
-          <Path d="M85 117 Q91 112 97 117 Q103 122 109 117 Q113 114 116 115.5" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M85 123 Q91 118 97 123 Q103 128 109 123 Q113 120 116 121.5" stroke={LIP} strokeWidth={2.4} strokeLinecap="round" fill="none" />
         </>
       );
     case 'confundido':
       return (
         <>
-          <Path d="M78 83 L94 85" stroke={INK} strokeWidth={2.4} strokeLinecap="round" opacity={0.65} />
-          <Path d="M106 77 Q114 70 122 77" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.65} />
-          <Ellipse cx={86} cy={93} rx={2.6} ry={3.2} fill={INK} opacity={0.8} />
-          <Ellipse cx={114} cy={90} rx={4} ry={4.8} fill={INK} opacity={0.8} />
-          <Path d="M88 118 Q94 115 98 118 Q102 121 108 117" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M77 89 L94 91" stroke={LINE} strokeWidth={2.6} strokeLinecap="round" opacity={0.8} />
+          <Path d="M105 83 Q114 75 123 83" stroke={LINE} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Eye cx={86} cy={99} rx={6} ry={4.4} />
+          <Eye cx={115} cy={96} rx={8} ry={6.2} />
+          <Path d="M86 124 Q93 120 98 124 Q103 128 111 122" stroke={LIP} strokeWidth={2.6} strokeLinecap="round" fill="none" />
         </>
       );
     case 'neutral':
     default:
       return (
         <>
-          <Path d="M80 80 Q86 78 92 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
-          <Path d="M108 80 Q114 78 120 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
-          <Ellipse cx={86} cy={92} rx={3.2} ry={4} fill={INK} opacity={0.8} />
-          <Ellipse cx={114} cy={92} rx={3.2} ry={4} fill={INK} opacity={0.8} />
-          <Path d="M89 115 Q100 120 111 115" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.75} />
+          <Path d="M79 86 Q86 83 93 86" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M107 86 Q114 83 121 86" stroke={LINE} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Eye cx={86} cy={99} rx={7} ry={5.2} />
+          <Eye cx={114} cy={99} rx={7} ry={5.2} />
+          <Path d="M89 122 Q100 128 111 122" stroke={LIP} strokeWidth={2.8} strokeLinecap="round" fill="none" />
         </>
       );
   }
 }
 
 /**
- * Rostro holográfico flotante de Gaby (sin cuerpo): una cabeza en 4D que respira, flota
- * y gira suavemente todo el tiempo, con anillos de luz y expresiones propias por emoción.
- * Íntegramente vectorial (SVG) para que se vea nítida en cualquier tamaño.
+ * Rostro holográfico flotante de Gaby (sin cuerpo): una cabeza con piel, cabello, ojos
+ * con iris y labios — que respira, flota y gira suavemente todo el tiempo, con anillos
+ * de luz por emoción. Íntegramente vectorial (SVG) para que se vea nítida en cualquier tamaño.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -240,19 +268,35 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           ],
         }}
       >
-        <Svg width={size} height={size} viewBox="36 46 128 128">
+        <Svg width={size} height={size} viewBox="20 20 160 160">
           <Defs>
-            <LinearGradient id="head" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.9} />
-              <Stop offset="1" stopColor={colorA} stopOpacity={0.5} />
+            <LinearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#F6D9BE" />
+              <Stop offset="1" stopColor="#DFAE81" />
+            </LinearGradient>
+            <LinearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#4A3222" />
+              <Stop offset="1" stopColor="#2A1C14" />
             </LinearGradient>
           </Defs>
 
-          {/* halo */}
-          <Circle cx={100} cy={100} r={54} fill={colorA} opacity={0.12} />
+          {/* halo holográfico */}
+          <Circle cx={100} cy={100} r={62} fill={colorA} opacity={0.14} />
 
-          {/* cabeza */}
-          <Ellipse cx={100} cy={100} rx={40} ry={46} fill="url(#head)" opacity={0.9} />
+          {/* orejas */}
+          <Ellipse cx={60} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
+          <Ellipse cx={140} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
+
+          {/* cabello (detrás de la cara: sobresale arriba y a los lados) */}
+          <Ellipse cx={100} cy={88} rx={45} ry={49} fill="url(#hair)" />
+
+          {/* cara */}
+          <Ellipse cx={100} cy={106} rx={37} ry={41} fill="url(#skin)" />
+          {/* aro de luz sutil en el borde, para no perder del todo el look holográfico */}
+          <Ellipse cx={100} cy={106} rx={37} ry={41} fill="none" stroke={colorA} strokeWidth={1.4} opacity={0.35} />
+
+          {/* mechón/flequillo sutil sobre la frente */}
+          <Path d="M64 84 Q100 62 136 84 Q100 74 64 84 Z" fill="url(#hair)" opacity={0.95} />
 
           {/* rostro */}
           <Face emotion={emotion} />
