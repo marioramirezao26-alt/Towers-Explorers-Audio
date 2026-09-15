@@ -22,7 +22,7 @@ interface ChatWithGabyResponse {
 }
 
 /**
- * Manda un mensaje a Gaby (Grok/xAI vía Cloud Function). La función guarda tanto el
+ * Manda un mensaje a Gaby (Claude vía Cloud Function). La función guarda tanto el
  * mensaje del usuario como la respuesta del asistente en Firestore, así que no hace
  * falta escribirlos por separado — el listener de subscribeToAssistantMessages los recibe.
  */
