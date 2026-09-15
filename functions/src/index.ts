@@ -3,3 +3,4 @@ import { initializeApp } from 'firebase-admin/app';
 initializeApp();
 
 export { chatWithGaby } from './chat';
+export { transcribeVoiceNote } from './transcribe';
