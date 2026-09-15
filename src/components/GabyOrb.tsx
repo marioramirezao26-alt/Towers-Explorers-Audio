@@ -3,6 +3,8 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle } from 'react-native-svg';
 import { colors } from '@/theme';
 
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 export type OrbState = 'idle' | 'listening' | 'awaiting-command' | 'thinking' | 'speaking';
 export type Emotion = 'neutral' | 'feliz' | 'enojo' | 'tristeza' | 'mareado' | 'confundido';
 
@@ -126,6 +128,10 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const drift = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
+  const leftSway = useRef(new Animated.Value(0)).current;
+  const rightSway = useRef(new Animated.Value(0)).current;
+  const wave = useRef(new Animated.Value(0)).current;
+  const prevEmotionRef = useRef(emotion);
 
   useEffect(() => {
     pulse.setValue(0);
@@ -172,11 +178,57 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
     return undefined;
   }, [emotion, tilt]);
 
+  // Vaivén sutil de ambos brazos (fuera de fase entre sí) para que se sienta viva, no estática.
+  useEffect(() => {
+    const makeSway = (value: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(value, { toValue: 1, duration: 2200, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(value, { toValue: -1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(value, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ]),
+      );
+    const leftLoop = makeSway(leftSway, 0);
+    const rightLoop = makeSway(rightSway, 700);
+    leftLoop.start();
+    rightLoop.start();
+    return () => {
+      leftLoop.stop();
+      rightLoop.stop();
+    };
+  }, [leftSway, rightSway]);
+
+  // Saluda con el brazo derecho al aparecer y cada vez que se pone feliz (escucha/responde).
+  useEffect(() => {
+    const becameFeliz = emotion === 'feliz' && prevEmotionRef.current !== 'feliz';
+    prevEmotionRef.current = emotion;
+    if (becameFeliz) playWave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emotion]);
+
+  useEffect(() => {
+    playWave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function playWave() {
+    wave.setValue(0);
+    Animated.sequence([
+      Animated.timing(wave, { toValue: -32, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(wave, { toValue: 4, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(wave, { toValue: -28, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(wave, { toValue: 4, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(wave, { toValue: 0, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+    ]).start();
+  }
+
   const [colorA, colorB] = EMOTION_META[emotion].colors;
   const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
   const coreScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.04] });
   const floatY = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
   const rotate = tilt.interpolate({ inputRange: [-45, 45], outputRange: ['-45deg', '45deg'] });
+  const leftArmRotation = leftSway.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
+  const rightArmRotation = Animated.add(rightSway.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }), wave);
 
   return (
     <View style={[styles.container, { width: size, height: size * 1.35 }]}>
@@ -241,22 +293,26 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
           ))}
           <Path d="M100 40 L100 268" stroke={colorA} strokeWidth={1} opacity={0.25} />
 
-          {/* brazos */}
-          <Path
+          {/* brazos (rotan desde el hombro: izquierdo se mece, derecho además saluda) */}
+          <AnimatedPath
             d="M60 150 C40 165 30 190 34 220"
             stroke="url(#body)"
             strokeWidth={10}
             strokeLinecap="round"
             fill="none"
             opacity={0.8}
+            origin="60, 150"
+            rotation={leftArmRotation as unknown as number}
           />
-          <Path
+          <AnimatedPath
             d="M140 150 C160 165 170 190 166 220"
             stroke="url(#body)"
             strokeWidth={10}
             strokeLinecap="round"
             fill="none"
             opacity={0.8}
+            origin="140, 150"
+            rotation={rightArmRotation as unknown as number}
           />
         </Svg>
       </Animated.View>
