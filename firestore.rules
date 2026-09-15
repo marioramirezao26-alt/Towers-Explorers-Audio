@@ -22,7 +22,10 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId} {
-      allow read: if isMember(workspaceId);
+      // Cualquier usuario autenticado puede leer un workspace (necesario para poder
+      // buscarlo por código de invitación antes de ser miembro). Los campos no son
+      // secretos; unirse/editar sigue controlado por la regla de "update" de abajo.
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.memberIds;
       // Unirse agrega el propio uid a memberIds; los demás campos los mantiene cualquier miembro.
       allow update: if isSignedIn() && (
