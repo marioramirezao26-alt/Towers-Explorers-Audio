@@ -1,34 +1,31 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-const xaiApiKey = defineSecret('XAI_API_KEY');
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
-const GROK_MODEL = 'grok-4';
+const MODEL = 'claude-opus-5';
 
-const CREATE_APPOINTMENT_TOOL = {
-  type: 'function' as const,
-  function: {
-    name: 'create_appointment',
-    description: 'Crea una cita/reunión en el calendario compartido del espacio de trabajo.',
-    parameters: {
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'Título de la cita' },
-        description: { type: 'string', description: 'Descripción opcional' },
-        location: { type: 'string', description: 'Lugar opcional' },
-        startTime: {
-          type: 'string',
-          description: 'Fecha y hora de inicio en formato ISO 8601, ej. 2026-09-20T15:00:00',
-        },
-        endTime: {
-          type: 'string',
-          description: 'Fecha y hora de fin en formato ISO 8601',
-        },
+const CREATE_APPOINTMENT_TOOL: Anthropic.Tool = {
+  name: 'create_appointment',
+  description: 'Crea una cita/reunión en el calendario compartido del espacio de trabajo.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Título de la cita' },
+      description: { type: 'string', description: 'Descripción opcional' },
+      location: { type: 'string', description: 'Lugar opcional' },
+      startTime: {
+        type: 'string',
+        description: 'Fecha y hora de inicio en formato ISO 8601, ej. 2026-09-20T15:00:00',
       },
-      required: ['title', 'startTime', 'endTime'],
+      endTime: {
+        type: 'string',
+        description: 'Fecha y hora de fin en formato ISO 8601',
+      },
     },
+    required: ['title', 'startTime', 'endTime'],
   },
 };
 
@@ -43,8 +40,13 @@ function systemPrompt(): string {
   );
 }
 
+function extractText(content: Anthropic.ContentBlock[]): string | null {
+  const block = content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+  return block?.text ?? null;
+}
+
 export const chatWithGaby = onCall(
-  { secrets: [xaiApiKey], cpu: 1, memory: '256MiB', timeoutSeconds: 60 },
+  { secrets: [anthropicApiKey], cpu: 1, memory: '256MiB', timeoutSeconds: 60 },
   async (request) => {
     const uid = request.auth?.uid;
     if (!uid) {
@@ -77,36 +79,38 @@ export const chatWithGaby = onCall(
     });
 
     const historySnap = await messagesRef.orderBy('createdAt', 'desc').limit(20).get();
-    const history = historySnap.docs
+    const history: Anthropic.MessageParam[] = historySnap.docs
       .map((d) => d.data())
       .reverse()
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content as string }));
 
-    const client = new OpenAI({
-      apiKey: xaiApiKey.value(),
-      baseURL: 'https://api.x.ai/v1',
-      maxRetries: 2,
-      timeout: 30000,
-    });
+    const client = new Anthropic({ apiKey: anthropicApiKey.value() });
 
     let finalText: string;
     try {
-      const baseMessages: any[] = [{ role: 'system', content: systemPrompt() }, ...history];
-
-      const completion = await client.chat.completions.create({
-        model: GROK_MODEL,
-        messages: baseMessages,
+      const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 16000,
+        system: systemPrompt(),
+        messages: history,
         tools: [CREATE_APPOINTMENT_TOOL],
       });
 
-      const choice = completion.choices[0];
-      const toolCalls = choice.message.tool_calls;
+      if (response.stop_reason === 'tool_use') {
+        const toolUseBlocks = response.content.filter(
+          (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+        );
 
-      if (toolCalls && toolCalls.length > 0) {
-        const toolResultMessages: any[] = [];
-        for (const call of toolCalls) {
-          if (call.function.name === 'create_appointment') {
-            const args = JSON.parse(call.function.arguments);
+        const toolResults: Anthropic.ToolResultBlockParam[] = [];
+        for (const block of toolUseBlocks) {
+          if (block.name === 'create_appointment') {
+            const args = block.input as {
+              title: string;
+              description?: string;
+              location?: string;
+              startTime: string;
+              endTime: string;
+            };
             const start = new Date(args.startTime).getTime();
             const end = new Date(args.endTime).getTime();
             const apptRef = await workspaceRef.collection('appointments').add({
@@ -119,33 +123,42 @@ export const chatWithGaby = onCall(
               createdAt: Date.now(),
               googleEventIds: {},
             });
-            toolResultMessages.push({
-              tool_call_id: call.id,
-              role: 'tool',
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
               content: JSON.stringify({ success: true, appointmentId: apptRef.id }),
             });
           }
         }
 
-        const followUp = await client.chat.completions.create({
-          model: GROK_MODEL,
+        const followUp = await client.messages.create({
+          model: MODEL,
+          max_tokens: 16000,
+          system: systemPrompt(),
           messages: [
-            ...baseMessages,
-            {
-              role: 'assistant',
-              content: choice.message.content ?? '',
-              tool_calls: toolCalls,
-            },
-            ...toolResultMessages,
+            ...history,
+            { role: 'assistant', content: response.content },
+            { role: 'user', content: toolResults },
           ],
         });
-        finalText = followUp.choices[0].message.content ?? 'Listo.';
+
+        finalText = extractText(followUp.content) ?? 'Listo.';
+      } else if (response.stop_reason === 'refusal') {
+        finalText = 'No puedo ayudarte con eso.';
       } else {
-        finalText = choice.message.content ?? 'No entendí bien, ¿puedes repetirlo?';
+        finalText = extractText(response.content) ?? 'No entendí bien, ¿puedes repetirlo?';
       }
-    } catch (error: any) {
-      console.error('Error consultando a Grok:', error, 'cause:', error?.cause);
-      finalText = `No pude responder (${error?.code ?? error?.status ?? 'error'}): ${error?.message ?? error}`;
+    } catch (error) {
+      console.error('Error consultando a Claude:', error);
+      if (error instanceof Anthropic.AuthenticationError) {
+        finalText = 'No pude responder: la API key de Claude no es válida.';
+      } else if (error instanceof Anthropic.RateLimitError) {
+        finalText = 'No pude responder: se alcanzó el límite de uso, intenta en un momento.';
+      } else if (error instanceof Anthropic.APIError) {
+        finalText = `No pude responder (${error.status}): ${error.message}`;
+      } else {
+        finalText = `No pude responder: ${(error as Error)?.message ?? error}`;
+      }
     }
 
     await messagesRef.add({

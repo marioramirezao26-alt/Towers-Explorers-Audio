@@ -15,6 +15,17 @@ export const colors = {
   border: '#2A3350',
 };
 
+/** Sombra de "brillo" holográfico alrededor de una tarjeta/botón. */
+export function glow(color: string, radius = 16, opacity = 0.3) {
+  return {
+    shadowColor: color,
+    shadowRadius: radius,
+    shadowOpacity: opacity,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  };
+}
+
 export const theme = {
   ...MD3DarkTheme,
   roundness: 16,

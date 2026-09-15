@@ -75,15 +75,15 @@ storage.rules                Reglas de seguridad de Storage
 
 Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4a`, la función `transcribeVoiceNote` se dispara sola, transcribe con Whisper y actualiza el documento en Firestore con el texto.
 
-## 3.1 Configurar el asistente de chat (Grok / xAI)
+## 3.1 Configurar el asistente de chat (Claude)
 
-La pestaña "Asistente" le permite a cualquiera de los dos escribirle a Gaby en lenguaje natural (ej. "agéndame una reunión con Juan el viernes a las 3pm") y ella crea la cita sola usando Grok.
+La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural (ej. "agéndame una reunión con Juan el viernes a las 3pm") y ella crea la cita sola usando la API de Claude (Anthropic).
 
-1. Crea una cuenta y una API key en [console.x.ai](https://console.x.ai/).
+1. Crea una cuenta y una API key en [console.anthropic.com](https://console.anthropic.com/).
 2. Guárdala como secreto:
 
    ```bash
-   firebase functions:secrets:set XAI_API_KEY
+   firebase functions:secrets:set ANTHROPIC_API_KEY
    ```
 
 3. Despliega (o vuelve a desplegar) las funciones:
@@ -95,7 +95,11 @@ La pestaña "Asistente" le permite a cualquiera de los dos escribirle a Gaby en 
    firebase deploy --only functions
    ```
 
-El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `GROK_MODEL`) — si xAI lanza un modelo más nuevo, solo cambia ese valor y vuelve a desplegar.
+El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `MODEL`, actualmente `claude-opus-5`) — si quieres usar otro, solo cambia ese valor y vuelve a desplegar.
+
+### Comandos de voz ("Hey Gaby")
+
+En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, di **"Gaby"** seguido de tu pedido (o solo "Gaby" y luego espera a que te pregunte) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android.
 
 ## 4. Configurar el login de Google Calendar
 
