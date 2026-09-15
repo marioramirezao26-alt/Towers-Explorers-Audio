@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle } from 'react-native-svg';
+import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle, Rect } from 'react-native-svg';
 import { colors } from '@/theme';
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 export type OrbState = 'idle' | 'listening' | 'awaiting-command' | 'thinking' | 'speaking';
 export type Emotion = 'neutral' | 'feliz' | 'enojo' | 'tristeza' | 'mareado' | 'confundido';
@@ -149,9 +152,12 @@ function Face({ emotion }: { emotion: Emotion }) {
 }
 
 /**
- * Rostro holográfico flotante de Gaby (sin cuerpo): una cabeza con piel, cabello, ojos
- * con iris y labios — que respira, flota y gira suavemente todo el tiempo, con anillos
- * de luz por emoción. Íntegramente vectorial (SVG) para que se vea nítida en cualquier tamaño.
+ * Busto holográfico flotante de Gaby: cabeza con piel, cabello recogido en chongo,
+ * ojos con iris y labios, cuello y hombros con "chaqueta" técnica de cuello alto, todo
+ * rematado con luz de borde azulada, líneas de circuito y anillos de proyección en la
+ * base — inspirado en un holograma realista. Respira, flota y gira suavemente todo el
+ * tiempo, con anillos de luz por emoción. Íntegramente vectorial (SVG) para que se vea
+ * nítida en cualquier tamaño.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -159,6 +165,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
   const drift = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
   const turn = useRef(new Animated.Value(0)).current;
+  const scan = useRef(new Animated.Value(0)).current;
   const fallbackTilt = useRef(new Animated.Value(0)).current;
   const deviceTiltX = tiltX ?? fallbackTilt;
   const deviceTiltY = tiltY ?? fallbackTilt;
@@ -222,6 +229,17 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
     return () => loop.stop();
   }, [turn]);
 
+  // Barrido de escaneo holográfico: una franja de luz que recorre el busto de arriba a
+  // abajo sin parar, como un holograma leyéndose a sí mismo.
+  useEffect(() => {
+    scan.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(scan, { toValue: 1, duration: 3400, easing: Easing.linear, useNativeDriver: false }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scan]);
+
   const [colorA, colorB] = EMOTION_META[emotion].colors;
   const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
   const coreScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.04] });
@@ -234,6 +252,10 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
   const deviceRotate = deviceTiltX.interpolate({ inputRange: [-1, 1], outputRange: ['-9deg', '9deg'] });
   const deviceTranslateX = deviceTiltX.interpolate({ inputRange: [-1, 1], outputRange: [-12, 12] });
   const deviceTranslateY = deviceTiltY.interpolate({ inputRange: [-1, 1], outputRange: [-10, 10] });
+  const scanY = scan.interpolate({ inputRange: [0, 1], outputRange: [12, 236] });
+  const ringOpacityOuter = Animated.multiply(glowOpacity, 0.6);
+  const ringOpacityMid = Animated.multiply(glowOpacity, 0.85);
+  const ringOpacityInner = glowOpacity;
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -268,7 +290,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           ],
         }}
       >
-        <Svg width={size} height={size} viewBox="20 20 160 160">
+        <Svg width={size} height={size} viewBox="0 0 200 250">
           <Defs>
             <LinearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor="#F6D9BE" />
@@ -278,28 +300,79 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
               <Stop offset="0" stopColor="#4A3222" />
               <Stop offset="1" stopColor="#2A1C14" />
             </LinearGradient>
+            <LinearGradient id="jacket" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#1A2130" />
+              <Stop offset="1" stopColor="#0B0F17" />
+            </LinearGradient>
+            <LinearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={colorA} stopOpacity={0} />
+              <Stop offset="0.5" stopColor={colorA} stopOpacity={0.55} />
+              <Stop offset="1" stopColor={colorA} stopOpacity={0} />
+            </LinearGradient>
           </Defs>
 
           {/* halo holográfico */}
           <Circle cx={100} cy={100} r={62} fill={colorA} opacity={0.14} />
 
+          {/* hombros y chaqueta técnica de cuello alto */}
+          <Path d="M30 235 Q38 182 76 175 L100 184 L124 175 Q162 182 170 235 L170 250 L30 250 Z" fill="url(#jacket)" />
+          <Path d="M38 182 Q58 174 76 175" stroke={colorA} strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M162 182 Q142 174 124 175" stroke={colorA} strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M100 184 L94 235" stroke={colorA} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.4} />
+          <Path d="M100 184 L106 235" stroke={colorA} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.4} />
+
+          {/* cuello */}
+          <Path d="M88 140 L112 140 L114 172 L86 172 Z" fill="url(#skin)" />
+
+          {/* cuello alto de la chaqueta, a los lados del cuello */}
+          <Path d="M62 172 Q72 146 96 143 L101 153 Q84 158 76 180 Z" fill="#141A24" />
+          <Path d="M138 172 Q128 146 104 143 L99 153 Q116 158 124 180 Z" fill="#141A24" />
+          <Path d="M96 143 Q80 150 76 180" stroke={colorA} strokeWidth={1.3} fill="none" opacity={0.55} />
+          <Path d="M104 143 Q120 150 124 180" stroke={colorA} strokeWidth={1.3} fill="none" opacity={0.55} />
+
           {/* orejas */}
           <Ellipse cx={60} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
           <Ellipse cx={140} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
 
-          {/* cabello (detrás de la cara: sobresale arriba y a los lados) */}
-          <Ellipse cx={100} cy={88} rx={45} ry={49} fill="url(#hair)" />
+          {/* cabello recogido (detrás de la cara: sobresale arriba y a los lados) */}
+          <Ellipse cx={100} cy={88} rx={41} ry={45} fill="url(#hair)" />
 
           {/* cara */}
           <Ellipse cx={100} cy={106} rx={37} ry={41} fill="url(#skin)" />
           {/* aro de luz sutil en el borde, para no perder del todo el look holográfico */}
           <Ellipse cx={100} cy={106} rx={37} ry={41} fill="none" stroke={colorA} strokeWidth={1.4} opacity={0.35} />
+          {/* luz de borde azulada, como si la luz cayera desde arriba a la derecha */}
+          <Path
+            d="M100 65 C120 68 137 85 137 106 C137 127 120 144 100 147"
+            stroke="#BFE8FF"
+            strokeWidth={2}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.5}
+          />
+
+          {/* raya al medio y chongo, para un look recogido y prolijo */}
+          <Path d="M100 46 L100 74" stroke="#2A1C14" strokeWidth={1.4} opacity={0.55} />
+          <Circle cx={100} cy={46} r={14} fill="url(#hair)" />
+          <Path d="M87 52 Q100 58 113 52" stroke="#2A1C14" strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.6} />
 
           {/* mechón/flequillo sutil sobre la frente */}
-          <Path d="M64 84 Q100 62 136 84 Q100 74 64 84 Z" fill="url(#hair)" opacity={0.95} />
+          <Path d="M66 82 Q100 64 134 82 Q100 73 66 82 Z" fill="url(#hair)" opacity={0.95} />
+
+          {/* líneas de circuito holográficas sobre sien y mejilla */}
+          <Path d="M66 94 L74 94 L74 100" stroke={colorA} strokeWidth={1} fill="none" opacity={0.4} />
+          <Path d="M134 120 L128 120 L128 126" stroke={colorA} strokeWidth={1} fill="none" opacity={0.4} />
 
           {/* rostro */}
           <Face emotion={emotion} />
+
+          {/* anillos de proyección holográfica en la base */}
+          <AnimatedEllipse cx={100} cy={246} rx={90} ry={9} stroke={colorB} strokeWidth={1.6} fill="none" opacity={ringOpacityOuter} />
+          <AnimatedEllipse cx={100} cy={246} rx={68} ry={7} stroke={colorA} strokeWidth={1.3} fill="none" opacity={ringOpacityMid} />
+          <AnimatedEllipse cx={100} cy={246} rx={46} ry={5} stroke={colorA} strokeWidth={1} fill="none" opacity={ringOpacityInner} />
+
+          {/* barrido de escaneo holográfico */}
+          <AnimatedRect x={10} y={scanY} width={180} height={20} fill="url(#scanGrad)" opacity={0.4} />
         </Svg>
       </Animated.View>
     </View>
