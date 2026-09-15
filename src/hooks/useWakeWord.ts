@@ -9,6 +9,16 @@ interface UseWakeWordOptions {
   lang?: string;
 }
 
+// Errores que casi seguro significan que el micrófono no va a funcionar hasta que
+// el usuario haga algo (dar permiso, revisar el hardware) — no vale la pena seguir
+// reintentando en silencio, mejor avisar.
+const FATAL_ERRORS = new Set(['not-allowed', 'audio-capture', 'service-not-allowed']);
+
+// Si no pasa NADA (ni resultado, ni error, ni fin) en este tiempo, asumimos que el
+// reconocimiento de voz se "colgó" (bug conocido de Android Chrome) y lo reiniciamos
+// desde cero en vez de quedarnos escuchando en silencio para siempre.
+const WATCHDOG_MS = 20000;
+
 function normalize(text: string): string {
   return text
     .toLowerCase()
@@ -30,6 +40,9 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
   const awaitingCommandRef = useRef(false);
   const enabledRef = useRef(false);
   const pausedRef = useRef(false);
+  const lastActivityRef = useRef(0);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCommandRef = useRef(onCommand);
   onCommandRef.current = onCommand;
 
@@ -38,9 +51,17 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
     typeof window !== 'undefined' &&
     !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
+  const clearTimers = () => {
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (watchdogRef.current) clearInterval(watchdogRef.current);
+    restartTimerRef.current = null;
+    watchdogRef.current = null;
+  };
+
   const stop = useCallback(() => {
     enabledRef.current = false;
     pausedRef.current = false;
+    clearTimers();
     setEnabled(false);
     setStatus('idle');
     recognitionRef.current?.abort();
@@ -54,12 +75,21 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
     const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Ctor) return;
 
+    clearTimers();
+
     const recognition = new Ctor();
     recognition.lang = lang;
     recognition.continuous = false;
     recognition.interimResults = false;
 
+    const touch = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    recognition.onstart = touch;
+
     recognition.onresult = (event) => {
+      touch();
       const last = event.results[event.results.length - 1];
       const transcript = normalize(last?.[0]?.transcript ?? '');
       if (!transcript) return;
@@ -82,18 +112,28 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
       }
     };
 
-    recognition.onerror = () => {
-      // 'no-speech', 'not-allowed', etc. — se reintenta solo en onend.
+    recognition.onerror = (event) => {
+      touch();
+      console.warn('useWakeWord: error de reconocimiento de voz:', event?.error);
+      if (FATAL_ERRORS.has(event?.error ?? '')) {
+        setStatus('error');
+      }
+      // Errores transitorios ('no-speech', 'aborted', 'network') se recuperan solos en onend.
     };
 
     recognition.onend = () => {
-      if (enabledRef.current && !pausedRef.current) {
+      touch();
+      if (!enabledRef.current || pausedRef.current) return;
+      // Pequeña pausa antes de reiniciar: en Android Chrome, reiniciar de inmediato
+      // (sin este respiro) hace que el reconocimiento se "cuelgue" en silencio.
+      restartTimerRef.current = setTimeout(() => {
+        if (!enabledRef.current || pausedRef.current) return;
         try {
           recognition.start();
         } catch {
           // ya estaba iniciado; se ignora
         }
-      }
+      }, 300);
     };
 
     recognitionRef.current = recognition;
@@ -101,11 +141,23 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
     pausedRef.current = false;
     setEnabled(true);
     setStatus('listening');
+    touch();
     try {
       recognition.start();
     } catch {
       setStatus('error');
+      return;
     }
+
+    // Vigilante: si el reconocimiento deja de dar señales de vida, lo reiniciamos entero.
+    watchdogRef.current = setInterval(() => {
+      if (!enabledRef.current || pausedRef.current) return;
+      if (Date.now() - lastActivityRef.current > WATCHDOG_MS) {
+        console.warn('useWakeWord: sin actividad, reiniciando el reconocimiento de voz.');
+        recognitionRef.current?.abort();
+        start();
+      }
+    }, 5000);
   }, [supported, wakeWord, lang]);
 
   const pause = useCallback(() => {
@@ -117,6 +169,7 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
     if (!enabledRef.current) return;
     pausedRef.current = false;
     setStatus('listening');
+    lastActivityRef.current = Date.now();
     try {
       recognitionRef.current?.start();
     } catch {
