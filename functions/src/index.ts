@@ -10,6 +10,7 @@ import OpenAI from 'openai';
 initializeApp();
 
 export { chatWithGaby } from './chat';
+export { speakWithElevenLabs } from './speak';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 

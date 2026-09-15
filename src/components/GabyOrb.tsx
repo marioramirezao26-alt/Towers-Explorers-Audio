@@ -3,8 +3,6 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle } from 'react-native-svg';
 import { colors } from '@/theme';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
 export type OrbState = 'idle' | 'listening' | 'awaiting-command' | 'thinking' | 'speaking';
 export type Emotion = 'neutral' | 'feliz' | 'enojo' | 'tristeza' | 'mareado' | 'confundido';
 
@@ -35,49 +33,49 @@ interface Props {
   size?: number;
 }
 
-/** Rostro (cejas, ojos y boca) de Gaby para cada emoción, sobre la cabeza (cx=100, cy=70). */
+/** Rostro (cejas, ojos y boca) de Gaby para cada emoción, sobre la cabeza (cx=100, cy=100). */
 function Face({ emotion }: { emotion: Emotion }) {
   switch (emotion) {
     case 'feliz':
       return (
         <>
-          <Path d="M79 48 Q86 44 93 47" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M107 47 Q114 44 121 48" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M80 61 Q86 55 92 61" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Path d="M108 61 Q114 55 120 61" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Path d="M82 82 Q100 102 118 82" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
-          <Circle cx={72} cy={74} r={3} fill={colors.success} opacity={0.45} />
-          <Circle cx={128} cy={74} r={3} fill={colors.success} opacity={0.45} />
+          <Path d="M79 78 Q86 74 93 77" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M107 77 Q114 74 121 78" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M80 91 Q86 85 92 91" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M108 91 Q114 85 120 91" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M82 112 Q100 132 118 112" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Circle cx={72} cy={104} r={3} fill={colors.success} opacity={0.45} />
+          <Circle cx={128} cy={104} r={3} fill={colors.success} opacity={0.45} />
         </>
       );
     case 'enojo':
       return (
         <>
-          <Path d="M78 46 L94 55" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
-          <Path d="M122 46 L106 55" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
-          <Ellipse cx={86} cy={64} rx={3} ry={2} fill={INK} opacity={0.85} />
-          <Ellipse cx={114} cy={64} rx={3} ry={2} fill={INK} opacity={0.85} />
-          <Path d="M84 93 Q100 83 116 93" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
+          <Path d="M78 76 L94 85" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
+          <Path d="M122 76 L106 85" stroke={colors.error} strokeWidth={4} strokeLinecap="round" />
+          <Ellipse cx={86} cy={94} rx={3} ry={2} fill={INK} opacity={0.85} />
+          <Ellipse cx={114} cy={94} rx={3} ry={2} fill={INK} opacity={0.85} />
+          <Path d="M84 123 Q100 113 116 123" stroke={INK} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.85} />
         </>
       );
     case 'tristeza':
       return (
         <>
-          <Path d="M79 53 Q86 47 93 46" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M107 46 Q114 47 121 53" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
-          <Path d="M80 63 Q86 68 92 63" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
-          <Path d="M108 63 Q114 68 120 63" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
-          <Path d="M114 69 q-2.4 5 0 8 q2.4 -3 0 -8" fill={colors.accent} opacity={0.75} />
-          <Path d="M88 90 Q100 84 112 90" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M79 83 Q86 77 93 76" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M107 76 Q114 77 121 83" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.6} />
+          <Path d="M80 93 Q86 98 92 93" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M108 93 Q114 98 120 93" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M114 99 q-2.4 5 0 8 q2.4 -3 0 -8" fill={colors.accent} opacity={0.75} />
+          <Path d="M88 120 Q100 114 112 120" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
         </>
       );
     case 'mareado':
       return (
         <>
-          <Path d="M80 50 Q86 48 92 50" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
-          <Path d="M108 50 Q114 48 120 50" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
+          <Path d="M80 80 Q86 78 92 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
+          <Path d="M108 80 Q114 78 120 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.3} />
           <Path
-            d="M86 55 C92 55 93 61 88 63 C85 64.3 81.5 62 82.5 59 C83.3 56.6 86.5 56 87.5 58"
+            d="M86 85 C92 85 93 91 88 93 C85 94.3 81.5 92 82.5 89 C83.3 86.6 86.5 86 87.5 88"
             stroke={colors.primary}
             strokeWidth={2.1}
             strokeLinecap="round"
@@ -85,42 +83,43 @@ function Face({ emotion }: { emotion: Emotion }) {
             opacity={0.95}
           />
           <Path
-            d="M114 55 C108 55 107 61 112 63 C115 64.3 118.5 62 117.5 59 C116.7 56.6 113.5 56 112.5 58"
+            d="M114 85 C108 85 107 91 112 93 C115 94.3 118.5 92 117.5 89 C116.7 86.6 113.5 86 112.5 88"
             stroke={colors.primary}
             strokeWidth={2.1}
             strokeLinecap="round"
             fill="none"
             opacity={0.95}
           />
-          <Path d="M85 87 Q91 82 97 87 Q103 92 109 87 Q113 84 116 85.5" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M85 117 Q91 112 97 117 Q103 122 109 117 Q113 114 116 115.5" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.8} />
         </>
       );
     case 'confundido':
       return (
         <>
-          <Path d="M78 53 L94 55" stroke={INK} strokeWidth={2.4} strokeLinecap="round" opacity={0.65} />
-          <Path d="M106 47 Q114 40 122 47" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.65} />
-          <Ellipse cx={86} cy={63} rx={2.6} ry={3.2} fill={INK} opacity={0.8} />
-          <Ellipse cx={114} cy={60} rx={4} ry={4.8} fill={INK} opacity={0.8} />
-          <Path d="M88 88 Q94 85 98 88 Q102 91 108 87" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
+          <Path d="M78 83 L94 85" stroke={INK} strokeWidth={2.4} strokeLinecap="round" opacity={0.65} />
+          <Path d="M106 77 Q114 70 122 77" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.65} />
+          <Ellipse cx={86} cy={93} rx={2.6} ry={3.2} fill={INK} opacity={0.8} />
+          <Ellipse cx={114} cy={90} rx={4} ry={4.8} fill={INK} opacity={0.8} />
+          <Path d="M88 118 Q94 115 98 118 Q102 121 108 117" stroke={INK} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.8} />
         </>
       );
     case 'neutral':
     default:
       return (
         <>
-          <Path d="M80 50 Q86 48 92 50" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
-          <Path d="M108 50 Q114 48 120 50" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
-          <Ellipse cx={86} cy={62} rx={3.2} ry={4} fill={INK} opacity={0.8} />
-          <Ellipse cx={114} cy={62} rx={3.2} ry={4} fill={INK} opacity={0.8} />
-          <Path d="M89 85 Q100 90 111 85" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.75} />
+          <Path d="M80 80 Q86 78 92 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
+          <Path d="M108 80 Q114 78 120 80" stroke={INK} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={0.55} />
+          <Ellipse cx={86} cy={92} rx={3.2} ry={4} fill={INK} opacity={0.8} />
+          <Ellipse cx={114} cy={92} rx={3.2} ry={4} fill={INK} opacity={0.8} />
+          <Path d="M89 115 Q100 120 111 115" stroke={INK} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={0.75} />
         </>
       );
   }
 }
 
 /**
- * Silueta humanoide holográfica con rostro propio: rejilla de líneas + núcleo de luz.
+ * Rostro holográfico flotante de Gaby (sin cuerpo): una cabeza en 4D que respira, flota
+ * y gira suavemente todo el tiempo, con anillos de luz y expresiones propias por emoción.
  * Íntegramente vectorial (SVG) para que se vea nítida en cualquier tamaño.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
@@ -128,10 +127,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const drift = useRef(new Animated.Value(0)).current;
   const tilt = useRef(new Animated.Value(0)).current;
-  const leftSway = useRef(new Animated.Value(0)).current;
-  const rightSway = useRef(new Animated.Value(0)).current;
-  const wave = useRef(new Animated.Value(0)).current;
-  const prevEmotionRef = useRef(emotion);
+  const turn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     pulse.setValue(0);
@@ -178,85 +174,63 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
     return undefined;
   }, [emotion, tilt]);
 
-  // Vaivén sutil de ambos brazos (fuera de fase entre sí) para que se sienta viva, no estática.
+  // Giro constante (efecto "4D"): la cabeza se ladea de lado a lado como si mirara alrededor,
+  // sin depender de la emoción — para que se sienta siempre viva y en movimiento.
   useEffect(() => {
-    const makeSway = (value: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(value, { toValue: 1, duration: 2200, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          Animated.timing(value, { toValue: -1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          Animated.timing(value, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-        ]),
-      );
-    const leftLoop = makeSway(leftSway, 0);
-    const rightLoop = makeSway(rightSway, 700);
-    leftLoop.start();
-    rightLoop.start();
-    return () => {
-      leftLoop.stop();
-      rightLoop.stop();
-    };
-  }, [leftSway, rightSway]);
-
-  // Saluda con el brazo derecho al aparecer y cada vez que se pone feliz (escucha/responde).
-  useEffect(() => {
-    const becameFeliz = emotion === 'feliz' && prevEmotionRef.current !== 'feliz';
-    prevEmotionRef.current = emotion;
-    if (becameFeliz) playWave();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emotion]);
-
-  useEffect(() => {
-    playWave();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function playWave() {
-    wave.setValue(0);
-    Animated.sequence([
-      Animated.timing(wave, { toValue: -32, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: false }),
-      Animated.timing(wave, { toValue: 4, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-      Animated.timing(wave, { toValue: -28, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-      Animated.timing(wave, { toValue: 4, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-      Animated.timing(wave, { toValue: 0, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: false }),
-    ]).start();
-  }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(turn, { toValue: 1, duration: 3600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(turn, { toValue: -1, duration: 3600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(turn, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [turn]);
 
   const [colorA, colorB] = EMOTION_META[emotion].colors;
   const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
   const coreScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1.04] });
   const floatY = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
   const rotate = tilt.interpolate({ inputRange: [-45, 45], outputRange: ['-45deg', '45deg'] });
-  const leftArmRotation = leftSway.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
-  const rightArmRotation = Animated.add(rightSway.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }), wave);
+  const turnRotate = turn.interpolate({ inputRange: [-1, 1], outputRange: ['-5deg', '5deg'] });
+  const turnScaleX = turn.interpolate({ inputRange: [-1, 1], outputRange: [0.92, 1.08] });
+  const turnTranslateX = turn.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] });
 
   return (
-    <View style={[styles.container, { width: size, height: size * 1.35 }]}>
+    <View style={[styles.container, { width: size, height: size }]}>
       <Animated.View
         style={[
           styles.haze,
-          { width: size * 2.1, height: size * 2.1, borderRadius: size, backgroundColor: colorA, opacity: Animated.multiply(glowOpacity, 0.12) },
+          { width: size * 1.8, height: size * 1.8, borderRadius: size, backgroundColor: colorA, opacity: Animated.multiply(glowOpacity, 0.14) },
         ]}
       />
       <Animated.View
         style={[
           styles.haze,
-          { width: size * 1.5, height: size * 1.5, borderRadius: size, backgroundColor: colorA, opacity: Animated.multiply(glowOpacity, 0.22) },
+          { width: size * 1.3, height: size * 1.3, borderRadius: size, backgroundColor: colorA, opacity: Animated.multiply(glowOpacity, 0.24) },
         ]}
       />
       <Animated.View
         style={[
           styles.haze,
-          { width: size * 1.05, height: size * 1.05, borderRadius: size, backgroundColor: colorB, opacity: Animated.multiply(glowOpacity, 0.3) },
+          { width: size * 1.0, height: size * 1.0, borderRadius: size, backgroundColor: colorB, opacity: Animated.multiply(glowOpacity, 0.32) },
         ]}
       />
-      <Animated.View style={{ transform: [{ translateY: floatY }, { scale: coreScale }, { rotate }] }}>
-        <Svg width={size} height={size * 1.35} viewBox="0 0 200 270">
+      <Animated.View
+        style={{
+          transform: [
+            { translateY: floatY },
+            { translateX: turnTranslateX },
+            { scale: coreScale },
+            { scaleX: turnScaleX },
+            { rotate },
+            { rotate: turnRotate },
+          ],
+        }}
+      >
+        <Svg width={size} height={size} viewBox="36 46 128 128">
           <Defs>
-            <LinearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colorB} stopOpacity={0.95} />
-              <Stop offset="1" stopColor={colorA} stopOpacity={0.35} />
-            </LinearGradient>
             <LinearGradient id="head" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.9} />
               <Stop offset="1" stopColor={colorA} stopOpacity={0.5} />
@@ -264,56 +238,13 @@ export default function GabyOrb({ state, emotionOverride, size = 220 }: Props) {
           </Defs>
 
           {/* halo */}
-          <Circle cx={100} cy={70} r={54} fill={colorA} opacity={0.12} />
-
-          {/* cuerpo (silueta con forma de vestido/túnica) */}
-          <Path
-            d="M62 160 C58 140 66 112 100 108 C134 112 142 140 138 160
-               L152 254 C154 262 148 268 140 268 L60 268
-               C52 268 46 262 48 254 Z"
-            fill="url(#body)"
-            opacity={0.85}
-          />
+          <Circle cx={100} cy={100} r={54} fill={colorA} opacity={0.12} />
 
           {/* cabeza */}
-          <Ellipse cx={100} cy={70} rx={30} ry={34} fill="url(#head)" opacity={0.9} />
+          <Ellipse cx={100} cy={100} rx={40} ry={46} fill="url(#head)" opacity={0.9} />
 
           {/* rostro */}
           <Face emotion={emotion} />
-
-          {/* líneas de "malla" holográfica sobre el cuerpo */}
-          {[130, 160, 190, 220, 250].map((y, i) => (
-            <Path
-              key={y}
-              d={`M${52 + i * 2} ${y} L${148 - i * 2} ${y}`}
-              stroke={colorA}
-              strokeWidth={1}
-              opacity={0.35}
-            />
-          ))}
-          <Path d="M100 40 L100 268" stroke={colorA} strokeWidth={1} opacity={0.25} />
-
-          {/* brazos (rotan desde el hombro: izquierdo se mece, derecho además saluda) */}
-          <AnimatedPath
-            d="M60 150 C40 165 30 190 34 220"
-            stroke="url(#body)"
-            strokeWidth={10}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.8}
-            origin="60, 150"
-            rotation={leftArmRotation as unknown as number}
-          />
-          <AnimatedPath
-            d="M140 150 C160 165 170 190 166 220"
-            stroke="url(#body)"
-            strokeWidth={10}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.8}
-            origin="140, 150"
-            rotation={rightArmRotation as unknown as number}
-          />
         </Svg>
       </Animated.View>
     </View>
