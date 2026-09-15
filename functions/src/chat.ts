@@ -31,13 +31,31 @@ const CREATE_APPOINTMENT_TOOL: Anthropic.Tool = {
   },
 };
 
+const SAVE_NOTE_TOOL: Anthropic.Tool = {
+  name: 'save_note',
+  description:
+    'Guarda una idea, recordatorio o nota como texto en el espacio de trabajo compartido, ' +
+    'visible en la pestaña "Notas de voz" (aparece igual que una nota grabada, pero solo con ' +
+    'texto). Úsala cuando te pidan apuntar, anotar, recordar o guardar algo.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Título corto para la nota' },
+      content: { type: 'string', description: 'El contenido de la nota a guardar' },
+    },
+    required: ['title', 'content'],
+  },
+};
+
 function systemPrompt(): string {
   return (
-    'Eres Gaby, la asistente personal compartida de un socio y su equipo. Ayudas a agendar ' +
-    'citas en un calendario compartido usando la herramienta create_appointment. Interpreta ' +
-    'fechas relativas ("mañana", "el viernes", "en dos horas") respecto a la fecha y hora ' +
-    'actual que se te da abajo, y usa formato ISO 8601 sin zona horaria para startTime/endTime. ' +
-    `La fecha y hora actual es ${new Date().toISOString()}. ` +
+    'Eres Gaby, la asistente personal compartida de un socio y su equipo. Tienes acceso a dos ' +
+    'herramientas: create_appointment para agendar citas en el calendario compartido, y ' +
+    'save_note para guardar ideas o recordatorios como notas de texto (aparecen en la pestaña ' +
+    '"Notas de voz"). Usa la que corresponda según lo que te pidan — no preguntes cuál usar, ' +
+    'decide sola. Interpreta fechas relativas ("mañana", "el viernes", "en dos horas") respecto ' +
+    'a la fecha y hora actual que se te da abajo, y usa formato ISO 8601 sin zona horaria para ' +
+    `startTime/endTime. La fecha y hora actual es ${new Date().toISOString()}. ` +
     'Responde siempre en español, de forma breve, natural y cálida.'
   );
 }
@@ -95,7 +113,7 @@ export const chatWithGaby = onCall(
         max_tokens: 16000,
         system: systemPrompt(),
         messages: history,
-        tools: [CREATE_APPOINTMENT_TOOL],
+        tools: [CREATE_APPOINTMENT_TOOL, SAVE_NOTE_TOOL],
       });
 
       if (response.stop_reason === 'tool_use') {
@@ -129,6 +147,23 @@ export const chatWithGaby = onCall(
               type: 'tool_result',
               tool_use_id: block.id,
               content: JSON.stringify({ success: true, appointmentId: apptRef.id }),
+            });
+          } else if (block.name === 'save_note') {
+            const args = block.input as { title: string; content: string };
+            const noteRef = await workspaceRef.collection('voiceNotes').add({
+              title: args.title,
+              audioPath: '',
+              audioUrl: null,
+              transcript: args.content,
+              status: 'done',
+              durationMillis: 0,
+              createdBy: uid,
+              createdAt: Date.now(),
+            });
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify({ success: true, noteId: noteRef.id }),
             });
           }
         }

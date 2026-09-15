@@ -77,7 +77,10 @@ Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4
 
 ## 3.1 Configurar el asistente de chat (Claude)
 
-La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural (ej. "agéndame una reunión con Juan el viernes a las 3pm") y ella crea la cita sola usando la API de Claude (Anthropic).
+La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural y ella actúa sola usando la API de Claude (Anthropic), con dos herramientas:
+
+- **Agendar citas** (ej. "agéndame una reunión con Juan el viernes a las 3pm") — crea la cita en el calendario compartido, igual que si la agregaras desde la pestaña Citas.
+- **Guardar notas** (ej. "apunta que hay que comprar cemento") — la guarda como una nota de texto en la pestaña "Notas de voz", igual que si la grabaras (pero sin audio, solo el texto).
 
 1. Crea una cuenta y una API key en [console.anthropic.com](https://console.anthropic.com/).
 2. Guárdala como secreto:

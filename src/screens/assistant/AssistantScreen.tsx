@@ -192,7 +192,7 @@ export default function AssistantScreen() {
             ListEmptyComponent={
               <Text style={styles.empty}>
                 Hola, soy Gaby. Escríbeme o dime "Gaby" — por ejemplo: "agéndame una reunión con
-                Juan el viernes a las 3pm".
+                Juan el viernes a las 3pm" o "apunta que hay que comprar cemento".
               </Text>
             }
             renderItem={({ item }) => {
