@@ -2,5 +2,5 @@ import { initializeApp } from 'firebase-admin/app';
 
 initializeApp();
 
-export { chatWithGaby } from './chat';
+export { researchWithOpenAI } from './research';
 export { transcribeVoiceNote } from './transcribe';

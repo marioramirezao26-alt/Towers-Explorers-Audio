@@ -5,25 +5,13 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import OpenAI from 'openai';
+import { redactSecrets } from './security';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
 // Coincide con el path que usa uploadVoiceNote() en la app:
 // workspaces/{workspaceId}/voiceNotes/{noteId}.m4a
 const AUDIO_PATH_REGEX = /^workspaces\/([^/]+)\/voiceNotes\/([^/.]+)\.[a-zA-Z0-9]+$/;
-
-/**
- * Por seguridad: nunca guardar ni mostrar una API key si por algún motivo terminara
- * dentro de un mensaje de error (ej. un cliente HTTP de bajo nivel que la incluya
- * cuando el secreto tiene un carácter inválido). Esto es justo lo que pasó una vez
- * con un OPENAI_API_KEY mal configurado — la key completa quedó en el mensaje de
- * error guardado en Firestore, visible en la app.
- */
-function redactSecrets(text: string): string {
-  return text
-    .replace(/sk-[A-Za-z0-9_-]{10,}/g, 'sk-***')
-    .replace(/Bearer\s+[A-Za-z0-9._-]{10,}/gi, 'Bearer ***');
-}
 
 export const transcribeVoiceNote = onObjectFinalized(
   { secrets: [openaiApiKey], cpu: 1, memory: '512MiB', timeoutSeconds: 300 },

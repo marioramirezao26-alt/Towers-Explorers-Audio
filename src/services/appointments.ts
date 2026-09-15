@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -24,6 +25,13 @@ export function subscribeToAppointments(
   return onSnapshot(q, (snap) => {
     onChange(snap.docs.map((d) => ({ ...(d.data() as Appointment), id: d.id })));
   });
+}
+
+/** Lectura puntual (no en vivo) de todas las citas — usada por el router local del Asistente. */
+export async function getAppointmentsOnce(workspaceId: string): Promise<Appointment[]> {
+  const q = query(appointmentsCollection(workspaceId), orderBy('startTime', 'asc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ ...(d.data() as Appointment), id: d.id }));
 }
 
 export async function getAppointment(

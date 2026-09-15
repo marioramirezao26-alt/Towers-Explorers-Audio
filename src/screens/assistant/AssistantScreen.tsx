@@ -49,12 +49,12 @@ export default function AssistantScreen() {
   const { tiltX: deviceTiltX, tiltY: deviceTiltY, requestPermission: requestTiltPermission } = useDeviceTilt();
 
   const handleSendText = async (text: string) => {
-    if (!workspace || !text.trim() || sendingRef.current) return;
+    if (!workspace || !profile || !text.trim() || sendingRef.current) return;
     sendingRef.current = true;
     setSending(true);
     setError(null);
     try {
-      const reply = await sendAssistantMessage(workspace.id, text.trim());
+      const reply = await sendAssistantMessage(workspace.id, profile.uid, text.trim());
       if (voiceReplies && speechSupported) {
         wakeWord.pause();
         speak(reply, {

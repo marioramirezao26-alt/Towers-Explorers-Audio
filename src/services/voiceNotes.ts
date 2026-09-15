@@ -75,6 +75,26 @@ export async function uploadVoiceNote(
   return docRef.id;
 }
 
+/** Guarda una nota de solo texto (sin audio) — usada por el router local del Asistente. */
+export async function saveNoteText(
+  workspaceId: string,
+  uid: string,
+  title: string,
+  content: string,
+): Promise<string> {
+  const docRef = await addDoc(voiceNotesCollection(workspaceId), {
+    title,
+    audioPath: '',
+    audioUrl: null,
+    transcript: content,
+    status: 'done',
+    durationMillis: 0,
+    createdBy: uid,
+    createdAt: Date.now(),
+  } as Omit<VoiceNote, 'id'>);
+  return docRef.id;
+}
+
 export async function deleteVoiceNote(workspaceId: string, note: VoiceNote): Promise<void> {
   await deleteDoc(doc(db, 'workspaces', workspaceId, 'voiceNotes', note.id));
   if (note.audioPath) {

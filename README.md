@@ -25,7 +25,7 @@ src/
     voicenotes/              Lista y grabación de notas de voz
   services/                  Firestore/Storage/Google Calendar (lógica de datos)
   types/                     Tipos TypeScript compartidos
-functions/                   Cloud Functions: chatWithGaby (Claude) y transcribeVoiceNote (Whisper)
+functions/                   Cloud Functions: researchWithOpenAI (investigación) y transcribeVoiceNote (Whisper)
 firestore.rules              Reglas de seguridad de Firestore
 storage.rules                Reglas de seguridad de Storage
 ```
@@ -77,31 +77,28 @@ Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4
 
 > **Nota de seguridad:** esta función ya sufrió una filtración real — un secreto con un carácter inválido (ej. un salto de línea de más al pegarlo) hizo que el cliente HTTP incluyera la key completa dentro de un mensaje de error, que quedaba guardado en Firestore y visible en la app. Se corrigió con dos capas: la key se recorta (`.trim()`) antes de usarse, y cualquier texto con forma de API key se tacha automáticamente (`redactSecrets()`) antes de guardar o mostrar un error. Aun así, si `transcribeVoiceNote` te muestra algo raro en una nota, avisa antes de asumir que es seguro.
 
-## 3.1 Configurar el asistente de chat (Claude)
+## 3.1 Configurar el asistente ("Asistente")
 
-La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural y ella actúa sola usando la API de Claude (Anthropic), con estas herramientas:
+La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural. Lo breve y frecuente lo resuelve **de forma nativa, sin IA** (gratis e instantáneo), y solo lo que no reconoce lo manda a OpenAI:
 
-- **Agendar citas** (ej. "agéndame una reunión con Juan el viernes a las 3pm") — crea la cita en el calendario compartido, igual que si la agregaras desde la pestaña Citas.
-- **Revisar y eliminar citas** (ej. "¿qué tengo esta semana?" o "cancela la cita con Juan") — Gaby puede leer la agenda compartida para buscar una cita y borrarla, todo en el mismo mensaje.
-- **Guardar notas** (ej. "apunta que hay que comprar cemento") — la guarda como una nota de texto en la pestaña "Notas de voz", igual que si la grabaras (pero sin audio, solo el texto).
+- **Router local** (`src/services/localAssistant.ts`, corre en el navegador/app, sin llamar a ningún servidor): reconoce frases en español con patrones de texto + [`chrono-node`](https://github.com/wanasit/chrono) para fechas, y resuelve directamente contra Firestore:
+  - **Agendar citas** (ej. "agéndame una reunión con Juan el viernes a las 3pm").
+  - **Revisar y eliminar citas** (ej. "¿qué tengo esta semana?" o "cancela la cita con Juan").
+  - **Guardar notas** (ej. "apunta que hay que comprar cemento") — queda en la pestaña "Notas de voz", igual que si la grabaras (pero sin audio, solo texto).
+- **`researchWithOpenAI`** (Cloud Function, `functions/src/research.ts`): si la frase no encaja en ninguno de los patrones anteriores (preguntas de investigación o conocimiento general), se manda a OpenAI (`gpt-4o-mini`) para responder. Usa el mismo secreto `OPENAI_API_KEY` que ya configuraste en el paso 3 para la transcripción — **no hace falta ningún secreto nuevo**.
 
-1. Crea una cuenta y una API key en [console.anthropic.com](https://console.anthropic.com/).
-2. Guárdala como secreto:
+Como el router local no entiende cualquier forma de decir las cosas (solo los patrones más comunes), si Gaby no reconoce un pedido de agenda/nota lo tratará como pregunta de investigación y respondrá con OpenAI en vez de agendar — en ese caso, pídeselo de nuevo con palabras más directas (ej. empezando con "agéndame...", "cancela...", "apunta que...").
 
-   ```bash
-   firebase functions:secrets:set ANTHROPIC_API_KEY
-   ```
+Redespliega las funciones después de actualizar el código:
 
-3. Despliega (o vuelve a desplegar) las funciones:
+```bash
+cd functions
+npm install
+cd ..
+firebase deploy --only functions
+```
 
-   ```bash
-   cd functions
-   npm install
-   cd ..
-   firebase deploy --only functions
-   ```
-
-El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `MODEL`, actualmente `claude-opus-5`) — si quieres usar otro, solo cambia ese valor y vuelve a desplegar.
+> Este proyecto usó antes la API de Claude (Anthropic) para esta pestaña; se reemplazó por el router local + OpenAI para reducir costo y dependencias. Si tienes un secreto `ANTHROPIC_API_KEY` configurado de antes, ya no se usa y puedes borrarlo con `firebase functions:secrets:destroy ANTHROPIC_API_KEY`.
 
 ### Comandos de voz ("Hey Gaby")
 
