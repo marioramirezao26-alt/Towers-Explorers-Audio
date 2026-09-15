@@ -152,12 +152,12 @@ function Face({ emotion }: { emotion: Emotion }) {
 }
 
 /**
- * Busto holográfico flotante de Gaby: cabeza con piel, cabello recogido en chongo,
- * ojos con iris y labios, cuello y hombros con "chaqueta" técnica de cuello alto, todo
- * rematado con luz de borde azulada, líneas de circuito y anillos de proyección en la
- * base — inspirado en un holograma realista. Respira, flota y gira suavemente todo el
- * tiempo, con anillos de luz por emoción. Íntegramente vectorial (SVG) para que se vea
- * nítida en cualquier tamaño.
+ * Busto cyborg/androide flotante de Gaby: mitad del rostro con piel e iris humanos,
+ * mitad con placa robótica cromada, costuras y remaches; cuello segmentado y
+ * hombros/pecho con placas metálicas, todo rematado con luz de borde azulada,
+ * líneas de circuito y anillos de proyección en la base. Respira, flota y gira
+ * suavemente todo el tiempo, con anillos de luz por emoción. Íntegramente vectorial
+ * (SVG) para que se vea nítida en cualquier tamaño.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -300,9 +300,14 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
               <Stop offset="0" stopColor="#4A3222" />
               <Stop offset="1" stopColor="#2A1C14" />
             </LinearGradient>
-            <LinearGradient id="jacket" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#1A2130" />
-              <Stop offset="1" stopColor="#0B0F17" />
+            <LinearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#B8C4D2" />
+              <Stop offset="1" stopColor="#576270" />
+            </LinearGradient>
+            <LinearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#EAF1F8" />
+              <Stop offset="0.55" stopColor="#B7C4D3" />
+              <Stop offset="1" stopColor="#7C8A99" />
             </LinearGradient>
             <LinearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={colorA} stopOpacity={0} />
@@ -314,31 +319,49 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           {/* halo holográfico */}
           <Circle cx={100} cy={100} r={62} fill={colorA} opacity={0.14} />
 
-          {/* hombros y chaqueta técnica de cuello alto */}
-          <Path d="M30 235 Q38 182 76 175 L100 184 L124 175 Q162 182 170 235 L170 250 L30 250 Z" fill="url(#jacket)" />
+          {/* hombros y pecho mecánico, con placas y remaches */}
+          <Path d="M30 235 Q38 182 76 175 L100 184 L124 175 Q162 182 170 235 L170 250 L30 250 Z" fill="url(#plate)" />
           <Path d="M38 182 Q58 174 76 175" stroke={colorA} strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.6} />
           <Path d="M162 182 Q142 174 124 175" stroke={colorA} strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.6} />
           <Path d="M100 184 L94 235" stroke={colorA} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.4} />
           <Path d="M100 184 L106 235" stroke={colorA} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.4} />
+          <Path d="M70 200 L90 195" stroke="#3A4250" strokeWidth={1.2} fill="none" opacity={0.5} />
+          <Path d="M130 200 L110 195" stroke="#3A4250" strokeWidth={1.2} fill="none" opacity={0.5} />
+          <Circle cx={78} cy={178} r={1.8} fill={colorA} opacity={0.6} />
+          <Circle cx={122} cy={178} r={1.8} fill={colorA} opacity={0.6} />
+          <Circle cx={100} cy={190} r={1.6} fill={colorA} opacity={0.5} />
 
-          {/* cuello */}
-          <Path d="M88 140 L112 140 L114 172 L86 172 Z" fill="url(#skin)" />
+          {/* cuello robótico segmentado */}
+          <Path d="M88 140 L112 140 L114 172 L86 172 Z" fill="url(#chrome)" />
+          <Path d="M89 150 L111 150" stroke="#3A4250" strokeWidth={1.4} opacity={0.6} />
+          <Path d="M88 160 L112 160" stroke={colorA} strokeWidth={0.9} opacity={0.5} />
 
-          {/* cuello alto de la chaqueta, a los lados del cuello */}
-          <Path d="M62 172 Q72 146 96 143 L101 153 Q84 158 76 180 Z" fill="#141A24" />
-          <Path d="M138 172 Q128 146 104 143 L99 153 Q116 158 124 180 Z" fill="#141A24" />
+          {/* cuello alto de placas metálicas, a los lados del cuello */}
+          <Path d="M62 172 Q72 146 96 143 L101 153 Q84 158 76 180 Z" fill="url(#plate)" />
+          <Path d="M138 172 Q128 146 104 143 L99 153 Q116 158 124 180 Z" fill="url(#plate)" />
           <Path d="M96 143 Q80 150 76 180" stroke={colorA} strokeWidth={1.3} fill="none" opacity={0.55} />
           <Path d="M104 143 Q120 150 124 180" stroke={colorA} strokeWidth={1.3} fill="none" opacity={0.55} />
 
-          {/* orejas */}
+          {/* orejas: izquierda orgánica, derecha una pieza mecánica con remache */}
           <Ellipse cx={60} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
-          <Ellipse cx={140} cy={108} rx={6.5} ry={10} fill="url(#skin)" />
+          <Ellipse cx={140} cy={108} rx={6.5} ry={10} fill="url(#chrome)" />
+          <Circle cx={140} cy={108} r={2} fill={colorA} opacity={0.6} />
 
           {/* cabello recogido (detrás de la cara: sobresale arriba y a los lados) */}
           <Ellipse cx={100} cy={88} rx={41} ry={45} fill="url(#hair)" />
 
-          {/* cara */}
+          {/* cara: mitad orgánica, mitad placa robótica (rostro cyborg) */}
           <Ellipse cx={100} cy={106} rx={37} ry={41} fill="url(#skin)" />
+          <Path d="M100 65 A37 41 0 0 1 100 147 Z" fill="url(#chrome)" />
+          {/* costuras/paneles sobre la mitad robótica */}
+          <Path d="M108 80 L108 95 L118 100" stroke="#4A5563" strokeWidth={1} fill="none" opacity={0.55} />
+          <Path d="M112 110 L124 112" stroke="#4A5563" strokeWidth={1} fill="none" opacity={0.55} />
+          <Path d="M105 125 L115 130 L112 138" stroke="#4A5563" strokeWidth={1} fill="none" opacity={0.55} />
+          <Circle cx={122} cy={95} r={1.4} fill={colorA} opacity={0.65} />
+          <Circle cx={118} cy={125} r={1.2} fill={colorA} opacity={0.55} />
+          {/* costura central que divide el rostro humano del robótico */}
+          <Path d="M100 66 L100 146" stroke="#2A2F3A" strokeWidth={1.6} opacity={0.5} />
+          <Path d="M100 66 L100 146" stroke={colorA} strokeWidth={0.8} opacity={0.55} />
           {/* aro de luz sutil en el borde, para no perder del todo el look holográfico */}
           <Ellipse cx={100} cy={106} rx={37} ry={41} fill="none" stroke={colorA} strokeWidth={1.4} opacity={0.35} />
           {/* luz de borde azulada, como si la luz cayera desde arriba a la derecha */}
@@ -350,6 +373,8 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
             fill="none"
             opacity={0.5}
           />
+          {/* aro luminoso alrededor del ojo robótico */}
+          <Circle cx={114} cy={99} r={9} stroke={colorA} strokeWidth={1.2} fill="none" opacity={0.6} />
 
           {/* raya al medio y chongo, para un look recogido y prolijo */}
           <Path d="M100 46 L100 74" stroke="#2A1C14" strokeWidth={1.4} opacity={0.55} />
