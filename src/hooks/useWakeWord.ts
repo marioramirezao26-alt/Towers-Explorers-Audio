@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-export type WakeWordStatus = 'idle' | 'listening' | 'awaiting-command' | 'unsupported' | 'error';
+export type WakeWordStatus = 'idle' | 'listening' | 'unsupported' | 'error';
 
 interface UseWakeWordOptions {
   onCommand: (command: string) => void;
-  wakeWord?: string;
   lang?: string;
 }
 
@@ -29,15 +28,15 @@ function normalize(text: string): string {
 
 /**
  * Escucha continuamente por el micrófono mientras esta pestaña esté abierta y en
- * primer plano, buscando la palabra clave ("gaby"). Solo funciona en web (Safari/
- * Chrome) — no hay forma de escuchar con la pantalla apagada o la app en segundo
- * plano dentro de una PWA, eso es una restricción del sistema, no de este código.
+ * primer plano: no hace falta decir ninguna palabra clave, cualquier cosa que se
+ * diga se manda directo como comando. Solo funciona en web (Safari/Chrome) — no
+ * hay forma de escuchar con la pantalla apagada o la app en segundo plano dentro
+ * de una PWA, eso es una restricción del sistema, no de este código.
  */
-export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: UseWakeWordOptions) {
+export function useWakeWord({ onCommand, lang = 'es-MX' }: UseWakeWordOptions) {
   const [enabled, setEnabled] = useState(false);
   const [status, setStatus] = useState<WakeWordStatus>('idle');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const awaitingCommandRef = useRef(false);
   const enabledRef = useRef(false);
   const pausedRef = useRef(false);
   const lastActivityRef = useRef(0);
@@ -93,23 +92,8 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
       const last = event.results[event.results.length - 1];
       const transcript = normalize(last?.[0]?.transcript ?? '');
       if (!transcript) return;
-
-      const wake = normalize(wakeWord);
-      if (transcript.includes(wake)) {
-        const after = transcript.split(wake).pop()?.trim() ?? '';
-        if (after) {
-          awaitingCommandRef.current = false;
-          setStatus('listening');
-          onCommandRef.current(after);
-        } else {
-          awaitingCommandRef.current = true;
-          setStatus('awaiting-command');
-        }
-      } else if (awaitingCommandRef.current) {
-        awaitingCommandRef.current = false;
-        setStatus('listening');
-        onCommandRef.current(transcript);
-      }
+      setStatus('listening');
+      onCommandRef.current(transcript);
     };
 
     recognition.onerror = (event) => {
@@ -158,7 +142,7 @@ export function useWakeWord({ onCommand, wakeWord = 'gaby', lang = 'es-MX' }: Us
         start();
       }
     }, 5000);
-  }, [supported, wakeWord, lang]);
+  }, [supported, lang]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;

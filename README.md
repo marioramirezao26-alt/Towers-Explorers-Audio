@@ -100,11 +100,11 @@ firebase deploy --only functions
 
 > Este proyecto usó antes la API de Claude (Anthropic) para esta pestaña; se reemplazó por el router local + OpenAI para reducir costo y dependencias. Si tienes un secreto `ANTHROPIC_API_KEY` configurado de antes, ya no se usa y puedes borrarlo con `firebase functions:secrets:destroy ANTHROPIC_API_KEY`.
 
-### Comandos de voz ("Hey Gaby")
+### Comandos de voz
 
-En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, di **"Gaby"** seguido de tu pedido (o solo "Gaby" y luego espera a que te pregunte) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) tanto para escuchar como para hablar — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android. Gaby elige automáticamente la mejor voz en español que ofrezca tu dispositivo/navegador.
+En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, simplemente háblale directo (no hace falta decir ninguna palabra clave antes) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) tanto para escuchar como para hablar — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android. Gaby elige automáticamente la mejor voz en español que ofrezca tu dispositivo/navegador.
 
-Mientras el modo de voz está activo, la pantalla no se apaga sola (usa la Screen Wake Lock API del navegador) — así "Hey Gaby" sigue escuchando sin que el celular se bloquee. Si el navegador no soporta esa API, simplemente no se aplica, sin afectar el resto de la app.
+Mientras el modo de voz está activo, la pantalla no se apaga sola (usa la Screen Wake Lock API del navegador) — así el micrófono sigue escuchando sin que el celular se bloquee. Si el navegador no soporta esa API, simplemente no se aplica, sin afectar el resto de la app.
 
 ## 4. Configurar el login de Google Calendar
 

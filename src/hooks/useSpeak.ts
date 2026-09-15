@@ -52,6 +52,10 @@ function sanitizeForSpeech(text: string): string {
 export function useSpeak() {
   const supported = Platform.OS === 'web' && typeof window !== 'undefined' && !!window.speechSynthesis;
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  // Chrome puede recolectar (GC) el objeto SpeechSynthesisUtterance antes de que
+  // termine de hablar si nada más lo referencia, dejando la voz en silencio sin
+  // ningún error visible — por eso lo guardamos aquí mientras dura.
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (!supported) return;
@@ -80,14 +84,28 @@ export function useSpeak() {
       utterance.rate = 0.97;
       utterance.pitch = 1.04;
       utterance.onstart = () => opts?.onStart?.();
-      utterance.onend = () => opts?.onEnd?.();
-      utterance.onerror = () => opts?.onEnd?.();
-      window.speechSynthesis.speak(utterance);
+      utterance.onend = () => {
+        utteranceRef.current = null;
+        opts?.onEnd?.();
+      };
+      utterance.onerror = () => {
+        utteranceRef.current = null;
+        opts?.onEnd?.();
+      };
+      utteranceRef.current = utterance;
+      // Llamar a speak() en el mismo tick que cancel() a veces hace que Chrome se
+      // quede en silencio sin avisar — un pequeño respiro evita esa carrera.
+      setTimeout(() => {
+        if (utteranceRef.current === utterance) {
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 50);
     },
     [supported],
   );
 
   const cancel = useCallback(() => {
+    utteranceRef.current = null;
     if (supported) window.speechSynthesis.cancel();
   }, [supported]);
 

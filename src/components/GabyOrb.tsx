@@ -6,14 +6,13 @@ import { colors } from '@/theme';
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
-export type OrbState = 'idle' | 'listening' | 'awaiting-command' | 'thinking' | 'speaking';
+export type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 export type Emotion = 'neutral' | 'feliz' | 'enojo' | 'tristeza' | 'mareado' | 'confundido';
 
 /** Emoción por defecto para cada estado técnico de la conversación. */
 const STATE_EMOTION: Record<OrbState, Emotion> = {
   idle: 'neutral',
   listening: 'feliz',
-  'awaiting-command': 'feliz',
   thinking: 'mareado',
   speaking: 'feliz',
 };

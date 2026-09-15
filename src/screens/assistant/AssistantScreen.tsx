@@ -18,15 +18,13 @@ import StarField from '@/components/StarField';
 const TITLE_LABEL: Record<string, string> = {
   thinking: 'Pensando…',
   speaking: 'Hablando…',
-  'awaiting-command': 'Te escucho…',
   listening: 'Escuchando…',
   idle: 'Presencia 4D',
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  idle: 'Toca el micrófono para decir "Gaby"',
-  listening: 'Di "Gaby" seguido de tu pedido',
-  'awaiting-command': 'Dime qué necesitas…',
+  idle: 'Toca el micrófono y háblame',
+  listening: 'Te escucho, dime qué necesitas',
   unsupported: 'Comandos de voz no disponibles en este navegador',
   error: 'No se pudo activar el micrófono',
 };
@@ -122,8 +120,6 @@ export default function AssistantScreen() {
     ? 'thinking'
     : isSpeaking
     ? 'speaking'
-    : wakeWord.status === 'awaiting-command'
-    ? 'awaiting-command'
     : wakeWord.enabled
     ? 'listening'
     : 'idle';
@@ -211,8 +207,9 @@ export default function AssistantScreen() {
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
                   <Text style={styles.empty}>
-                    Hola, soy Gaby. Escríbeme o dime "Gaby" — por ejemplo: "agéndame una reunión con
-                    Juan el viernes a las 3pm" o "apunta que hay que comprar cemento".
+                    Hola, soy Gaby. Escríbeme o, con el micrófono activo, solo háblame directo —
+                    por ejemplo: "agéndame una reunión con Juan el viernes a las 3pm" o "apunta
+                    que hay que comprar cemento".
                   </Text>
                 }
                 renderItem={({ item }) => {
