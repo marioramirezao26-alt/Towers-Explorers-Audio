@@ -9,6 +9,7 @@ import { sendAssistantMessage, subscribeToAssistantMessages } from '@/services/a
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useDeviceTilt } from '@/hooks/useDeviceTilt';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { AssistantMessage } from '@/types';
 import { colors, glow } from '@/theme';
 import GabyOrb, { Emotion, OrbState } from '@/components/GabyOrb';
@@ -71,6 +72,8 @@ export default function AssistantScreen() {
   };
 
   const wakeWord = useWakeWord({ onCommand: (command) => handleSendText(command) });
+  // La pantalla no se apaga mientras Gaby está escuchando, para que "Hey Gaby" siga funcionando.
+  useWakeLock(wakeWord.enabled);
 
   useEffect(() => {
     if (!workspace) return;

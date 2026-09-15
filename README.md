@@ -77,9 +77,10 @@ Cada vez que se sube un audio a `workspaces/{workspaceId}/voiceNotes/{noteId}.m4
 
 ## 3.1 Configurar el asistente de chat (Claude)
 
-La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural y ella actúa sola usando la API de Claude (Anthropic), con dos herramientas:
+La pestaña "Asistente" le permite a cualquiera de los dos escribirle (o hablarle) a Gaby en lenguaje natural y ella actúa sola usando la API de Claude (Anthropic), con estas herramientas:
 
 - **Agendar citas** (ej. "agéndame una reunión con Juan el viernes a las 3pm") — crea la cita en el calendario compartido, igual que si la agregaras desde la pestaña Citas.
+- **Revisar y eliminar citas** (ej. "¿qué tengo esta semana?" o "cancela la cita con Juan") — Gaby puede leer la agenda compartida para buscar una cita y borrarla, todo en el mismo mensaje.
 - **Guardar notas** (ej. "apunta que hay que comprar cemento") — la guarda como una nota de texto en la pestaña "Notas de voz", igual que si la grabaras (pero sin audio, solo el texto).
 
 1. Crea una cuenta y una API key en [console.anthropic.com](https://console.anthropic.com/).
@@ -103,6 +104,8 @@ El modelo usado está fijo en el código (`functions/src/chat.ts`, constante `MO
 ### Comandos de voz ("Hey Gaby")
 
 En la pestaña Asistente, toca el ícono de micrófono para activar el modo de voz: mientras la app esté abierta y en la pantalla, di **"Gaby"** seguido de tu pedido (o solo "Gaby" y luego espera a que te pregunte) y ella te responde hablando. Esto usa la Web Speech API del navegador (Safari/Chrome) tanto para escuchar como para hablar — solo funciona con la app abierta y en primer plano; no hay forma de escuchar con la pantalla apagada dentro de una app web, eso es una restricción de iOS/Android. Gaby elige automáticamente la mejor voz en español que ofrezca tu dispositivo/navegador.
+
+Mientras el modo de voz está activo, la pantalla no se apaga sola (usa la Screen Wake Lock API del navegador) — así "Hey Gaby" sigue escuchando sin que el celular se bloquee. Si el navegador no soporta esa API, simplemente no se aplica, sin afectar el resto de la app.
 
 ## 4. Configurar el login de Google Calendar
 

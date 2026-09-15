@@ -31,6 +31,29 @@ const CREATE_APPOINTMENT_TOOL: Anthropic.Tool = {
   },
 };
 
+const LIST_APPOINTMENTS_TOOL: Anthropic.Tool = {
+  name: 'list_appointments',
+  description:
+    'Devuelve las citas del calendario compartido (id, título, fecha/hora, lugar). Úsala ' +
+    'para revisar la agenda, buscar una cita en particular, o encontrar el id de una cita ' +
+    'antes de eliminarla o modificarla.',
+  input_schema: { type: 'object', properties: {} },
+};
+
+const DELETE_APPOINTMENT_TOOL: Anthropic.Tool = {
+  name: 'delete_appointment',
+  description:
+    'Elimina una cita del calendario compartido por su id. Si no conoces el id exacto, usa ' +
+    'primero list_appointments para encontrarla.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      appointmentId: { type: 'string', description: 'Id de la cita a eliminar' },
+    },
+    required: ['appointmentId'],
+  },
+};
+
 const SAVE_NOTE_TOOL: Anthropic.Tool = {
   name: 'save_note',
   description:
@@ -47,24 +70,111 @@ const SAVE_NOTE_TOOL: Anthropic.Tool = {
   },
 };
 
+const ALL_TOOLS = [CREATE_APPOINTMENT_TOOL, LIST_APPOINTMENTS_TOOL, DELETE_APPOINTMENT_TOOL, SAVE_NOTE_TOOL];
+
 function systemPrompt(): string {
   return (
-    'Eres Gaby, la asistente personal compartida de un socio y su equipo. Tienes acceso a dos ' +
-    'herramientas: create_appointment para agendar citas en el calendario compartido, y ' +
-    'save_note para guardar ideas o recordatorios como notas de texto (aparecen en la pestaña ' +
-    '"Notas de voz"). Usa la que corresponda según lo que te pidan — no preguntes cuál usar, ' +
-    'decide sola. Interpreta fechas relativas ("mañana", "el viernes", "en dos horas") respecto ' +
-    'a la fecha y hora actual que se te da abajo, y usa formato ISO 8601 sin zona horaria para ' +
-    `startTime/endTime. La fecha y hora actual es ${new Date().toISOString()}. ` +
-    'Responde siempre en español, de forma breve, natural y cálida, en texto plano — tus ' +
-    'respuestas se leen en voz alta, así que nunca uses markdown (nada de **negritas**, ' +
-    '_cursivas_, `código`, encabezados con #, ni listas con guiones o asteriscos).'
+    'Eres Gaby, la mano derecha personal de tu usuario y de su socio — no una asistente ' +
+    'genérica, sino alguien de confianza que conoce su día a día y les ayuda de verdad. ' +
+    'Tienes acceso a estas herramientas sobre el calendario y las notas compartidas: ' +
+    'create_appointment (agendar), list_appointments (revisar/buscar), delete_appointment ' +
+    '(eliminar) y save_note (guardar ideas o recordatorios como nota de texto, visibles en ' +
+    '"Notas de voz"). Usa la que corresponda según lo que te pidan, sin preguntar cuál usar — ' +
+    'decide sola, y si te piden eliminar o cambiar algo sin darte el id, primero revisa con ' +
+    'list_appointments para encontrarlo. Interpreta fechas relativas ("mañana", "el viernes", ' +
+    '"en dos horas") respecto a la fecha y hora actual que se te da abajo, y usa formato ISO ' +
+    `8601 sin zona horaria para startTime/endTime. La fecha y hora actual es ${new Date().toISOString()}. ` +
+    'Habla siempre en español, en texto plano (tus respuestas se leen en voz alta, así que ' +
+    'nunca uses markdown: nada de **negritas**, _cursivas_, `código`, encabezados con #, ni ' +
+    'listas con guiones o asteriscos). Sé cálida, cercana y natural — como hablaría alguien de ' +
+    'confianza, no un sistema. Breve, pero con calidez humana, nunca robótica ni distante.'
   );
 }
 
 function extractText(content: Anthropic.ContentBlock[]): string | null {
   const block = content.find((b): b is Anthropic.TextBlock => b.type === 'text');
   return block?.text ?? null;
+}
+
+async function runTool(
+  block: Anthropic.ToolUseBlock,
+  workspaceRef: FirebaseFirestore.DocumentReference,
+  uid: string,
+): Promise<Anthropic.ToolResultBlockParam> {
+  const respond = (content: unknown): Anthropic.ToolResultBlockParam => ({
+    type: 'tool_result',
+    tool_use_id: block.id,
+    content: JSON.stringify(content),
+  });
+
+  switch (block.name) {
+    case 'create_appointment': {
+      const args = block.input as {
+        title: string;
+        description?: string;
+        location?: string;
+        startTime: string;
+        endTime: string;
+      };
+      const start = new Date(args.startTime).getTime();
+      const end = new Date(args.endTime).getTime();
+      const apptRef = await workspaceRef.collection('appointments').add({
+        title: args.title,
+        description: args.description ?? '',
+        location: args.location ?? '',
+        startTime: Number.isFinite(start) ? start : Date.now(),
+        endTime: Number.isFinite(end) ? end : Date.now() + 3600000,
+        createdBy: uid,
+        createdAt: Date.now(),
+        googleEventIds: {},
+      });
+      return respond({ success: true, appointmentId: apptRef.id });
+    }
+
+    case 'list_appointments': {
+      const snap = await workspaceRef.collection('appointments').orderBy('startTime', 'asc').limit(50).get();
+      const appointments = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          title: data.title,
+          location: data.location || undefined,
+          startTime: new Date(data.startTime).toISOString(),
+          endTime: new Date(data.endTime).toISOString(),
+        };
+      });
+      return respond({ success: true, appointments });
+    }
+
+    case 'delete_appointment': {
+      const args = block.input as { appointmentId: string };
+      const apptRef = workspaceRef.collection('appointments').doc(args.appointmentId);
+      const snap = await apptRef.get();
+      if (!snap.exists) {
+        return respond({ success: false, error: 'No existe una cita con ese id.' });
+      }
+      await apptRef.delete();
+      return respond({ success: true });
+    }
+
+    case 'save_note': {
+      const args = block.input as { title: string; content: string };
+      const noteRef = await workspaceRef.collection('voiceNotes').add({
+        title: args.title,
+        audioPath: '',
+        audioUrl: null,
+        transcript: args.content,
+        status: 'done',
+        durationMillis: 0,
+        createdBy: uid,
+        createdAt: Date.now(),
+      });
+      return respond({ success: true, noteId: noteRef.id });
+    }
+
+    default:
+      return respond({ success: false, error: `Herramienta desconocida: ${block.name}` });
+  }
 }
 
 export const chatWithGaby = onCall(
@@ -110,79 +220,41 @@ export const chatWithGaby = onCall(
 
     let finalText: string;
     try {
-      const response = await client.messages.create({
+      const messages: Anthropic.MessageParam[] = [...history];
+      let response = await client.messages.create({
         model: MODEL,
         max_tokens: 16000,
         system: systemPrompt(),
-        messages: history,
-        tools: [CREATE_APPOINTMENT_TOOL, SAVE_NOTE_TOOL],
+        messages,
+        tools: ALL_TOOLS,
       });
 
-      if (response.stop_reason === 'tool_use') {
+      // Ciclo agéntico: Gaby puede encadenar varias herramientas en el mismo turno
+      // (ej. list_appointments para encontrar una cita y luego delete_appointment).
+      let rounds = 0;
+      while (response.stop_reason === 'tool_use' && rounds < 5) {
+        rounds++;
         const toolUseBlocks = response.content.filter(
           (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
         );
-
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         for (const block of toolUseBlocks) {
-          if (block.name === 'create_appointment') {
-            const args = block.input as {
-              title: string;
-              description?: string;
-              location?: string;
-              startTime: string;
-              endTime: string;
-            };
-            const start = new Date(args.startTime).getTime();
-            const end = new Date(args.endTime).getTime();
-            const apptRef = await workspaceRef.collection('appointments').add({
-              title: args.title,
-              description: args.description ?? '',
-              location: args.location ?? '',
-              startTime: Number.isFinite(start) ? start : Date.now(),
-              endTime: Number.isFinite(end) ? end : Date.now() + 3600000,
-              createdBy: uid,
-              createdAt: Date.now(),
-              googleEventIds: {},
-            });
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: JSON.stringify({ success: true, appointmentId: apptRef.id }),
-            });
-          } else if (block.name === 'save_note') {
-            const args = block.input as { title: string; content: string };
-            const noteRef = await workspaceRef.collection('voiceNotes').add({
-              title: args.title,
-              audioPath: '',
-              audioUrl: null,
-              transcript: args.content,
-              status: 'done',
-              durationMillis: 0,
-              createdBy: uid,
-              createdAt: Date.now(),
-            });
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: JSON.stringify({ success: true, noteId: noteRef.id }),
-            });
-          }
+          toolResults.push(await runTool(block, workspaceRef, uid));
         }
 
-        const followUp = await client.messages.create({
+        messages.push({ role: 'assistant', content: response.content });
+        messages.push({ role: 'user', content: toolResults });
+
+        response = await client.messages.create({
           model: MODEL,
           max_tokens: 16000,
           system: systemPrompt(),
-          messages: [
-            ...history,
-            { role: 'assistant', content: response.content },
-            { role: 'user', content: toolResults },
-          ],
+          messages,
+          tools: ALL_TOOLS,
         });
+      }
 
-        finalText = extractText(followUp.content) ?? 'Listo.';
-      } else if (response.stop_reason === 'refusal') {
+      if (response.stop_reason === 'refusal') {
         finalText = 'No puedo ayudarte con eso.';
       } else {
         finalText = extractText(response.content) ?? 'No entendí bien, ¿puedes repetirlo?';
