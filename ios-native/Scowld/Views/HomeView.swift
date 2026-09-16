@@ -298,7 +298,7 @@ struct HomeView: View {
     }
 
     private var messageField: some View {
-        TextField("Message...", text: $messageText)
+        TextField("Escríbele a Gaby…", text: $messageText)
             .textFieldStyle(.plain)
             .submitLabel(.send)
             .onSubmit { if !isBusy { stopAndSend() } }
