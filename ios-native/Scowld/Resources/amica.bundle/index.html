@@ -5,13 +5,354 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gaby</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #050712; color: #7AA9FF; font-family: -apple-system, sans-serif; }
-  .placeholder { display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 24px; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #03060f;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
 </style>
 </head>
 <body>
-  <div class="placeholder">
-    Aquí va el visor 3D de Gaby (Three.js + VRM).<br />Todavía no está conectado — es un marcador de posición.
-  </div>
+<canvas id="face"></canvas>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/webgpu": "./vendor/three.module.js",
+    "three/tsl": "./vendor/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// El rostro de Gaby como nube de puntos 3D — misma construcción que la versión
+// web (src/components/GabyParticleFace.tsx), reescrita sin React y sin la cadena
+// de postprocesado: aquí el resplandor sale de sprites con degradado radial y
+// mezcla aditiva, que se ve casi igual y evita cargar EffectComposer y sus
+// dependencias dentro de la app.
+
+const RX = 0.55, RY = 0.78, RZ = 0.62;
+
+const EMOTIONS = {
+  neutral: { color: '#5AA9FF', speed: 3800 },
+  happy:   { color: '#49E0C0', speed: 2200 },
+  sad:     { color: '#6E7FD8', speed: 5200 },
+  angry:   { color: '#FF7A6B', speed: 1800 },
+  confused:{ color: '#B98CFF', speed: 3000 },
+};
+
+function fibonacciSphere(count) {
+  const points = [];
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / Math.max(1, count - 1)) * 2;
+    const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    points.push({ x: Math.cos(theta) * radiusAtY, y, z: Math.sin(theta) * radiusAtY });
+  }
+  return points;
+}
+
+function buildPoints() {
+  const points = [];
+
+  for (const p of fibonacciSphere(230)) {
+    points.push({
+      x: p.x * RX, y: p.y * RY, z: p.z * RZ,
+      isEye: false, isMouth: false,
+      size: 0.014 + Math.random() * 0.01,
+      brightness: 0.75 + Math.random() * 0.25,
+    });
+  }
+
+  const CONTOUR_COUNT = 46;
+  for (let i = 0; i < CONTOUR_COUNT; i++) {
+    const a = (i / CONTOUR_COUNT) * Math.PI * 2;
+    points.push({
+      x: Math.cos(a) * RX * (0.94 + Math.random() * 0.05),
+      y: Math.sin(a) * RY * (0.94 + Math.random() * 0.05),
+      z: RZ * (0.55 + Math.random() * 0.08),
+      isEye: false, isMouth: false, size: 0.017, brightness: 0.95,
+    });
+  }
+
+  // Ojos: un núcleo muy brillante con un halo apenas insinuado alrededor. El
+  // anillo va bien pegado al centro para que lea como un punto de luz y no
+  // como una mancha.
+  for (const ex of [-0.32, 0.32]) {
+    for (let i = 0; i < 5; i++) {
+      const isCore = i === 0;
+      const a = (i / 4) * Math.PI * 2;
+      const r = isCore ? 0 : 0.022;
+      points.push({
+        x: ex * RX + Math.cos(a) * r,
+        y: 0.08 * RY + Math.sin(a) * r,
+        z: RZ * 0.98,
+        isEye: true, isMouth: false,
+        size: isCore ? 0.075 : 0.03,
+        brightness: isCore ? 1.25 : 0.6,
+      });
+    }
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    points.push({
+      x: (Math.random() - 0.5) * 0.02,
+      y: 0.05 * RY - t * 0.28 * RY,
+      z: RZ * (0.98 + t * 0.06),
+      isEye: false, isMouth: false, size: 0.015, brightness: 0.9,
+    });
+  }
+
+  const MOUTH_COUNT = 8;
+  for (let i = 0; i < MOUTH_COUNT; i++) {
+    const t = i / (MOUTH_COUNT - 1) - 0.5;
+    points.push({
+      x: t * 0.42 * RX, y: -0.42 * RY, z: RZ * 0.95,
+      isEye: false, isMouth: true, size: 0.019, brightness: 1.0,
+    });
+  }
+
+  return points;
+}
+
+function buildEdges(points) {
+  const MAX_DIST = 0.16, MAX_NEIGHBORS = 4;
+  const seen = new Set();
+  const edges = [];
+  for (let i = 0; i < points.length; i++) {
+    // Los ojos no se conectan con nada: las líneas los encerraban en una jaula
+    // cuadrada en vez de dejarlos leer como dos puntos de luz.
+    if (points[i].isEye) continue;
+    const candidates = [];
+    for (let j = 0; j < points.length; j++) {
+      if (i === j || points[j].isEye) continue;
+      const dx = points[i].x - points[j].x;
+      const dy = points[i].y - points[j].y;
+      const dz = points[i].z - points[j].z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d <= MAX_DIST) candidates.push({ j, d });
+    }
+    candidates.sort((a, b) => a.d - b.d);
+    for (const { j } of candidates.slice(0, MAX_NEIGHBORS)) {
+      const key = i < j ? i + '-' + j : j + '-' + i;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ a: Math.min(i, j), b: Math.max(i, j) });
+    }
+  }
+  return edges;
+}
+
+/** Punto con degradado radial: el halo suave es lo que da la sensación de brillo. */
+function glowTexture() {
+  const S = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  grad.addColorStop(0.0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.18, 'rgba(255,255,255,0.85)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.22)');
+  grad.addColorStop(1.0, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, S, S);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const specs = buildPoints();
+const edges = buildEdges(specs);
+const mouthIndices = specs.map((p, i) => (p.isMouth ? i : -1)).filter((i) => i >= 0);
+
+const canvas = document.getElementById('face');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+renderer.setClearColor(0x000000, 0);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 20);
+camera.position.set(0, 0, 1.9);
+
+const group = new THREE.Group();
+scene.add(group);
+
+let emotion = 'neutral';
+let speaking = false;
+let lastPulseTime = -10;
+
+const baseColor = new THREE.Color(EMOTIONS[emotion].color);
+const eyeColor = new THREE.Color('#EAFBFF');
+
+const positions = new Float32Array(specs.length * 3);
+const colors = new Float32Array(specs.length * 3);
+const sizes = new Float32Array(specs.length);
+specs.forEach((p, i) => {
+  positions[i * 3] = p.x;
+  positions[i * 3 + 1] = p.y;
+  positions[i * 3 + 2] = p.z;
+  const c = p.isEye ? eyeColor : baseColor;
+  colors[i * 3] = c.r * p.brightness;
+  colors[i * 3 + 1] = c.g * p.brightness;
+  colors[i * 3 + 2] = c.b * p.brightness;
+  sizes[i] = p.size;
+});
+
+const pointsGeometry = new THREE.BufferGeometry();
+pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+pointsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+pointsGeometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+// Shader propio para que cada punto conserve su tamaño individual (los ojos
+// mucho más grandes que el resto) con atenuación por distancia.
+const pointsMaterial = new THREE.ShaderMaterial({
+  // uScale lleva la altura real del lienzo, para que los puntos se vean del
+  // mismo tamaño relativo en cualquier pantalla (no en píxeles fijos).
+  uniforms: { uTexture: { value: glowTexture() }, uScale: { value: 800 } },
+  vertexShader: `
+    attribute float aSize;
+    uniform float uScale;
+    varying vec3 vColor;
+    void main() {
+      vColor = color;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = aSize * uScale / -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D uTexture;
+    varying vec3 vColor;
+    void main() {
+      vec4 t = texture2D(uTexture, gl_PointCoord);
+      gl_FragColor = vec4(vColor, 1.0) * t;
+    }
+  `,
+  transparent: true,
+  vertexColors: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
+const pointCloud = new THREE.Points(pointsGeometry, pointsMaterial);
+group.add(pointCloud);
+
+const linePositions = new Float32Array(edges.length * 2 * 3);
+edges.forEach((e, i) => {
+  linePositions[i * 6] = specs[e.a].x;
+  linePositions[i * 6 + 1] = specs[e.a].y;
+  linePositions[i * 6 + 2] = specs[e.a].z;
+  linePositions[i * 6 + 3] = specs[e.b].x;
+  linePositions[i * 6 + 4] = specs[e.b].y;
+  linePositions[i * 6 + 5] = specs[e.b].z;
+});
+const lineGeometry = new THREE.BufferGeometry();
+lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+const lineMaterial = new THREE.LineBasicMaterial({
+  color: baseColor, transparent: true, opacity: 0.38,
+  blending: THREE.AdditiveBlending, depthWrite: false,
+});
+group.add(new THREE.LineSegments(lineGeometry, lineMaterial));
+
+// Medias-extensiones de la cabeza más margen — separadas, porque la cabeza es
+// más alta que ancha y usar un solo radio la dejaba chica en pantalla vertical.
+const FIT_HALF_WIDTH = RX * 1.25;
+const FIT_HALF_HEIGHT = RY * 1.2;
+/** Los puntos se dibujan bastante más grandes que su tamaño geométrico: el halo
+ *  que se desborda es justamente lo que da el aspecto de luz. */
+const GLOW_SIZE_BOOST = 2.6;
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+
+  // Aleja la cámara lo justo para que la cabeza entre completa, de alto y de
+  // ancho — sin esto, en una pantalla vertical de teléfono queda cortada.
+  const halfFovY = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const tan = Math.tan(halfFovY);
+  const distForHeight = FIT_HALF_HEIGHT / tan;
+  const distForWidth = FIT_HALF_WIDTH / (tan * camera.aspect);
+  camera.position.z = Math.max(distForHeight, distForWidth);
+  camera.updateProjectionMatrix();
+
+  // Píxeles por unidad de mundo, para que el tamaño de los puntos no dependa de
+  // la resolución de la pantalla.
+  pointsMaterial.uniforms.uScale.value = ((h * dpr) / (2 * tan)) * GLOW_SIZE_BOOST;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const clock = new THREE.Clock();
+
+function animate() {
+  const t = clock.getElapsedTime();
+  const meta = EMOTIONS[emotion] || EMOTIONS.neutral;
+  const pulse = 0.5 + 0.5 * Math.sin((t * 2 * Math.PI) / (meta.speed / 1000));
+
+  group.rotation.y = Math.sin(t * 0.35) * 0.32;
+  group.rotation.x = Math.sin(t * 0.5) * 0.06;
+  group.scale.setScalar(0.97 + pulse * 0.04);
+
+  const sinceBoundary = t - lastPulseTime;
+  const mouthOpen = !speaking
+    ? 0
+    : sinceBoundary < 0.6
+      ? Math.max(0, 1 - sinceBoundary / 0.32)
+      : Math.max(0, Math.sin(t * 12));
+
+  const colorAttr = pointsGeometry.getAttribute('color');
+  const posAttr = pointsGeometry.getAttribute('position');
+  for (const idx of mouthIndices) {
+    const base = specs[idx];
+    posAttr.setY(idx, base.y - mouthOpen * 0.05);
+    const boost = 1 + mouthOpen * 0.8;
+    colorAttr.setXYZ(
+      idx,
+      baseColor.r * base.brightness * boost,
+      baseColor.g * base.brightness * boost,
+      baseColor.b * base.brightness * boost
+    );
+  }
+  posAttr.needsUpdate = true;
+  colorAttr.needsUpdate = true;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+// Puente con la app nativa (HomeView.swift la llama con evaluateJavaScript).
+function applyEmotion(name) {
+  if (!EMOTIONS[name]) return;
+  emotion = name;
+  baseColor.set(EMOTIONS[name].color);
+  lineMaterial.color.set(EMOTIONS[name].color);
+  const colorAttr = pointsGeometry.getAttribute('color');
+  specs.forEach((p, i) => {
+    const c = p.isEye ? eyeColor : baseColor;
+    colorAttr.setXYZ(i, c.r * p.brightness, c.g * p.brightness, c.b * p.brightness);
+  });
+  colorAttr.needsUpdate = true;
+}
+
+window.gabySetEmotion = applyEmotion;
+window.gabySetSpeaking = (value) => {
+  speaking = !!value;
+  if (!speaking) lastPulseTime = -10;
+};
+/** Un pulso por cada palabra hablada — sincroniza la boca con la voz real. */
+window.gabyTalkPulse = () => { lastPulseTime = clock.getElapsedTime(); };
+</script>
 </body>
 </html>
