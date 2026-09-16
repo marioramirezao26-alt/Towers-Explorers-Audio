@@ -2,8 +2,13 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle, Rect } from 'react-native-svg';
 import { colors } from '@/theme';
-import GabyParticleFace from './GabyParticleFace';
+import GabyVrmFace from './GabyVrmFace';
 import { Emotion, EMOTION_META, OrbState, STATE_EMOTION } from './gabyOrbShared';
+
+// Configurable por variable de entorno para no tocar código cuando consigas un
+// modelo VRM propio — ver GabyVrmFace.tsx para de dónde sacar uno con licencia
+// que sí te permita usarlo aquí (VRoid Studio, por ejemplo).
+const VRM_MODEL_URL = process.env.EXPO_PUBLIC_VRM_MODEL_URL;
 
 export type { Emotion, OrbState } from './gabyOrbShared';
 
@@ -12,7 +17,7 @@ const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 // Paleta "humana" del rostro (independiente del color del aro holográfico, que sigue
 // usando los tonos de marca según la emoción). Solo la usa el respaldo vectorial (no
-// web) — en web el rostro real es GabyParticleFace (malla de partículas).
+// web) — en web el rostro real es GabyVrmFace (avatar VRM 3D).
 const LINE = '#3B2A1E'; // cejas, párpados
 const PUPIL = '#1A1108';
 const IRIS = '#5B3A29';
@@ -137,11 +142,13 @@ function Face({ emotion }: { emotion: Emotion }) {
 
 /**
  * Presencia flotante de Gaby. En web (la plataforma real de la app) el rostro es
- * GabyParticleFace: una malla de partículas animada en <canvas>. El busto
- * cyborg/androide vectorial (SVG) de aquí abajo queda como respaldo para cuando se
- * abre en Expo Go / nativo, donde no hay <canvas> del DOM disponible. En ambos casos
- * este componente pone el halo ambiental y el movimiento (respirar, flotar, girar,
- * inclinarse con el sensor del teléfono) alrededor del rostro.
+ * GabyVrmFace: un avatar VRM 3D real (Three.js + three-vrm), o un marcador de
+ * posición mientras no haya un modelo VRM configurado. El busto cyborg/androide
+ * vectorial (SVG) de aquí abajo queda como respaldo para cuando se abre en Expo Go
+ * / nativo, donde no hay <canvas>/WebGL del DOM disponible — ese es el siguiente
+ * paso (un WebView, como hace Scowld). En ambos casos este componente pone el halo
+ * ambiental y el movimiento (respirar, flotar, girar, inclinarse con el sensor del
+ * teléfono) alrededor del rostro.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -275,7 +282,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
         }}
       >
         {Platform.OS === 'web' ? (
-          <GabyParticleFace state={state} emotion={emotion} size={size} />
+          <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} />
         ) : (
         <Svg width={size} height={size} viewBox="0 0 200 250">
           <Defs>
