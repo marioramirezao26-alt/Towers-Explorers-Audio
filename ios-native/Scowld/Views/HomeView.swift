@@ -2335,16 +2335,16 @@ private struct RuntimeLLMProvider {
 private extension View {
     @ViewBuilder
     func scowldComposerGlass() -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.interactive(), in: Capsule())
-        } else {
-            self
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(.white.opacity(0.14), lineWidth: 0.5)
-                )
-        }
+        // El efecto "Liquid Glass" (iOS 26+, `.glassEffect`) no se usa por ahora: la
+        // API no existe en el SDK con el que compila el CI (GitHub Actions) ni,
+        // probablemente, en el Xcode que uses para firmar/instalar — hay que
+        // verificarlo con Xcode 26 antes de poder volver a usar la rama de arriba.
+        self
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(.white.opacity(0.14), lineWidth: 0.5)
+            )
     }
 }
 

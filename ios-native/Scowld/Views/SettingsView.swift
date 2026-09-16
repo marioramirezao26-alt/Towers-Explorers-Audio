@@ -474,39 +474,33 @@ struct SettingsView: View {
         isDisabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        if #available(iOS 26.0, *) {
-            Button(action: action) {
-                Label("Save", systemImage: "checkmark")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.glassProminent)
-            .tint(.amicaBlue)
-            .disabled(isDisabled)
-        } else {
-            Button(action: action) {
-                Label("Save", systemImage: "checkmark")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule().fill(
-                            LinearGradient(
-                                colors: [.amicaBlue, .amicaBlue.opacity(0.7)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
+        // El estilo "Liquid Glass" (iOS 26+, `.glassProminent`) no se usa por ahora:
+        // la API no existe en el SDK con el que compila el CI (GitHub Actions) ni,
+        // probablemente, en el Xcode que uses para firmar/instalar — hay que
+        // verificarlo con Xcode 26 antes de poder volver a usar esa rama.
+        Button(action: action) {
+            Label("Save", systemImage: "checkmark")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule().fill(
+                        LinearGradient(
+                            colors: [.amicaBlue, .amicaBlue.opacity(0.7)],
+                            startPoint: .top,
+                            endPoint: .bottom
                         )
                     )
-                    .overlay(
-                        Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.8)
-                    )
-                    .shadow(color: .amicaBlue.opacity(0.4), radius: 8, y: 3)
-            }
-            .buttonStyle(.plain)
-            .disabled(isDisabled)
-            .opacity(isDisabled ? 0.5 : 1)
+                )
+                .overlay(
+                    Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.8)
+                )
+                .shadow(color: .amicaBlue.opacity(0.4), radius: 8, y: 3)
         }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.5 : 1)
     }
 
     private static let customModelTag = "__scowld_custom_model__"
