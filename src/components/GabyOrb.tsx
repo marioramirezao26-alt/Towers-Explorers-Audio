@@ -1,33 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle, Rect } from 'react-native-svg';
 import { colors } from '@/theme';
+import GabyParticleFace from './GabyParticleFace';
+import { Emotion, EMOTION_META, OrbState, STATE_EMOTION } from './gabyOrbShared';
+
+export type { Emotion, OrbState } from './gabyOrbShared';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
-export type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
-export type Emotion = 'neutral' | 'feliz' | 'enojo' | 'tristeza' | 'mareado' | 'confundido';
-
-/** Emoción por defecto para cada estado técnico de la conversación. */
-const STATE_EMOTION: Record<OrbState, Emotion> = {
-  idle: 'neutral',
-  listening: 'feliz',
-  thinking: 'mareado',
-  speaking: 'feliz',
-};
-
-const EMOTION_META: Record<Emotion, { colors: [string, string]; speed: number }> = {
-  neutral: { colors: [colors.accent, colors.primary], speed: 2600 },
-  feliz: { colors: [colors.success, colors.accent], speed: 1800 },
-  enojo: { colors: [colors.error, colors.primary], speed: 900 },
-  tristeza: { colors: [colors.textMuted, colors.primary], speed: 3600 },
-  mareado: { colors: [colors.primary, colors.accent], speed: 550 },
-  confundido: { colors: [colors.accent, colors.textMuted], speed: 2000 },
-};
-
 // Paleta "humana" del rostro (independiente del color del aro holográfico, que sigue
-// usando los tonos de marca según la emoción).
+// usando los tonos de marca según la emoción). Solo la usa el respaldo vectorial (no
+// web) — en web el rostro real es GabyParticleFace (malla de partículas).
 const LINE = '#3B2A1E'; // cejas, párpados
 const PUPIL = '#1A1108';
 const IRIS = '#5B3A29';
@@ -151,12 +136,12 @@ function Face({ emotion }: { emotion: Emotion }) {
 }
 
 /**
- * Busto cyborg/androide flotante de Gaby: mitad del rostro con piel e iris humanos,
- * mitad con placa robótica cromada, costuras y remaches; cuello segmentado y
- * hombros/pecho con placas metálicas, todo rematado con luz de borde azulada,
- * líneas de circuito y anillos de proyección en la base. Respira, flota y gira
- * suavemente todo el tiempo, con anillos de luz por emoción. Íntegramente vectorial
- * (SVG) para que se vea nítida en cualquier tamaño.
+ * Presencia flotante de Gaby. En web (la plataforma real de la app) el rostro es
+ * GabyParticleFace: una malla de partículas animada en <canvas>. El busto
+ * cyborg/androide vectorial (SVG) de aquí abajo queda como respaldo para cuando se
+ * abre en Expo Go / nativo, donde no hay <canvas> del DOM disponible. En ambos casos
+ * este componente pone el halo ambiental y el movimiento (respirar, flotar, girar,
+ * inclinarse con el sensor del teléfono) alrededor del rostro.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -289,6 +274,9 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           ],
         }}
       >
+        {Platform.OS === 'web' ? (
+          <GabyParticleFace state={state} emotion={emotion} size={size} />
+        ) : (
         <Svg width={size} height={size} viewBox="0 0 200 250">
           <Defs>
             <LinearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
@@ -398,6 +386,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           {/* barrido de escaneo holográfico */}
           <AnimatedRect x={10} y={scanY} width={180} height={20} fill="url(#scanGrad)" opacity={0.4} />
         </Svg>
+        )}
       </Animated.View>
     </View>
   );
