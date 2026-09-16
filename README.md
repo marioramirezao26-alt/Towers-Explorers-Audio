@@ -106,6 +106,10 @@ En la pestaña Asistente, toca el ícono de micrófono para activar el modo de v
 
 Mientras el modo de voz está activo, la pantalla no se apaga sola (usa la Screen Wake Lock API del navegador) — así el micrófono sigue escuchando sin que el celular se bloquee. Si el navegador no soporta esa API, simplemente no se aplica, sin afectar el resto de la app.
 
+Si el navegador no tiene reconocimiento de voz nativo (ej. Firefox), o si el de Chrome empieza a fallar seguido, el ícono del micrófono cambia a un botón de "mantén presionado para hablar": graba un audio corto y lo manda a la Cloud Function `transcribeCommand` (Whisper de OpenAI) para convertirlo a texto. A diferencia del reconocimiento del navegador (gratis), este respaldo sí tiene costo por cada uso — es solo un plan B, no el modo por defecto.
+
+La cara de Gaby (`GabyVrmFace`, ver más abajo) también reacciona al tono de cada respuesta: un motor simple de emociones (`src/utils/detectEmotion.ts`) mira el texto por palabras clave y cambia la expresión (feliz, triste, confundida) en vez de mostrar siempre la misma cara al hablar. Y si el modelo VRM soporta `expressionManager` con boca (`aa`), Gaby mueve los labios en sync con los límites de palabra reales que reporta el navegador al hablar (no una animación genérica) — cuando la voz no reporta esos límites, cae de vuelta a una animación simple.
+
 ### Un cuerpo físico para Gaby (Stack-chan)
 
 `stackchan-firmware/` tiene el firmware de un Stack-chan (M5Stack Core2 + cuello

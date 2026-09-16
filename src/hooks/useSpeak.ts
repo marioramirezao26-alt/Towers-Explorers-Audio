@@ -5,6 +5,10 @@ interface SpeakOptions {
   lang?: string;
   onStart?: () => void;
   onEnd?: () => void;
+  /** Se dispara en cada límite de palabra que reporte el motor de voz — úsalo para
+   * animar la boca del avatar en sync con el habla real (no todos los navegadores
+   * ni voces lo disparan; si nunca llega, el avatar cae a una animación genérica). */
+  onBoundary?: () => void;
 }
 
 const LANG_PRIORITY = ['es-MX', 'es-US', 'es-419', 'es-ES', 'es'];
@@ -84,6 +88,9 @@ export function useSpeak() {
       utterance.rate = 0.97;
       utterance.pitch = 1.04;
       utterance.onstart = () => opts?.onStart?.();
+      utterance.onboundary = (event) => {
+        if (event.name === 'word' || event.name === undefined) opts?.onBoundary?.();
+      };
       utterance.onend = () => {
         utteranceRef.current = null;
         opts?.onEnd?.();

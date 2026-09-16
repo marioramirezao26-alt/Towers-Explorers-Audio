@@ -31,6 +31,8 @@ interface Props {
   /** -1..1: cómo inclinas el celular de verdad (sensor de orientación), de useDeviceTilt(). */
   tiltX?: Animated.Value;
   tiltY?: Animated.Value;
+  /** Se incrementa en cada límite de palabra real del habla — ver GabyVrmFace. */
+  talkPulse?: number;
 }
 
 /** Ojo "realista": esclerótica blanca + iris + pupila + brillo, para las emociones con ojos abiertos. */
@@ -150,7 +152,7 @@ function Face({ emotion }: { emotion: Emotion }) {
  * ambiental y el movimiento (respirar, flotar, girar, inclinarse con el sensor del
  * teléfono) alrededor del rostro.
  */
-export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY }: Props) {
+export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY, talkPulse }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
   const pulse = useRef(new Animated.Value(0)).current;
   const drift = useRef(new Animated.Value(0)).current;
@@ -282,7 +284,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
         }}
       >
         {Platform.OS === 'web' ? (
-          <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} />
+          <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} talkPulse={talkPulse} />
         ) : (
         <Svg width={size} height={size} viewBox="0 0 200 250">
           <Defs>

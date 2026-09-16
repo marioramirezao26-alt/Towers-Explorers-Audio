@@ -19,6 +19,10 @@ interface Props {
   modelUrl?: string;
   /** Voltea el modelo 180° en Y — algunos VRM 0.x quedan mirando "hacia atrás". */
   flip?: boolean;
+  /** Se incrementa en cada límite de palabra real del habla (ver useSpeak.onBoundary) —
+   * abre/cierra la boca en sync con el audio real en vez de una onda genérica. Si no
+   * llegan pulsos recientes mientras `state === 'speaking'`, cae a la onda genérica. */
+  talkPulse?: number;
 }
 
 /**
@@ -28,13 +32,15 @@ interface Props {
  * versión para iOS nativo (WebView embebido, como hace Scowld con Swift) es el
  * siguiente paso, una vez que se confirme que este visor se ve bien.
  */
-export default function GabyVrmFace({ state, emotion, size, modelUrl, flip = true }: Props) {
+export default function GabyVrmFace({ state, emotion, size, modelUrl, flip = true, talkPulse = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const vrmRef = useRef<VRM | null>(null);
   const stateRef = useRef(state);
   const emotionRef = useRef(emotion);
+  const talkPulseRef = useRef(talkPulse);
   stateRef.current = state;
   emotionRef.current = emotion;
+  talkPulseRef.current = talkPulse;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -92,11 +98,18 @@ export default function GabyVrmFace({ state, emotion, size, modelUrl, flip = tru
     const clock = new THREE.Clock();
     let rafId: number;
     let blinkAt = 2 + Math.random() * 2;
+    let lastSeenPulse = talkPulseRef.current;
+    let lastPulseTime = -10;
 
     const animate = () => {
       const delta = clock.getDelta();
       const t = clock.getElapsedTime();
       const vrm = vrmRef.current;
+
+      if (talkPulseRef.current !== lastSeenPulse) {
+        lastSeenPulse = talkPulseRef.current;
+        lastPulseTime = t;
+      }
 
       if (vrm) {
         // Parpadeo cada tanto, y boca hablando cuando el estado es "speaking".
@@ -107,7 +120,15 @@ export default function GabyVrmFace({ state, emotion, size, modelUrl, flip = tru
         const blink = blinkAt > 2.5 - 0.12 ? 0 : Math.max(0, 1 - Math.abs(blinkAt - 1.2) * 6);
         vrm.expressionManager?.setValue('blink', blink);
         if (stateRef.current === 'speaking') {
-          vrm.expressionManager?.setValue('aa', Math.max(0, Math.sin(t * 12)) * 0.6);
+          const sinceBoundary = t - lastPulseTime;
+          // Si llegaron límites de palabra recientes, la boca "aplaude" en sync con
+          // cada uno (lip-sync real); si no (voz/navegador que no los reporta), cae
+          // a una onda genérica para que igual se vea que está hablando.
+          const mouth =
+            sinceBoundary < 0.6
+              ? Math.max(0, 1 - sinceBoundary / 0.32) * 0.75
+              : Math.max(0, Math.sin(t * 12)) * 0.6;
+          vrm.expressionManager?.setValue('aa', mouth);
         } else {
           vrm.expressionManager?.setValue('aa', 0);
         }

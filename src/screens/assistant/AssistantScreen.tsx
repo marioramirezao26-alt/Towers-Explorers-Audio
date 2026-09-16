@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { IconButton, Text, TextInput } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,10 +11,12 @@ import { useWakeWord } from '@/hooks/useWakeWord';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useDeviceTilt } from '@/hooks/useDeviceTilt';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { usePushToTalk } from '@/hooks/usePushToTalk';
 import { AssistantMessage } from '@/types';
 import { colors, glow } from '@/theme';
 import GabyOrb, { Emotion, OrbState } from '@/components/GabyOrb';
 import StarField from '@/components/StarField';
+import { detectEmotionFromText } from '@/utils/detectEmotion';
 
 const TITLE_LABEL: Record<string, string> = {
   thinking: 'Pensando…',
@@ -27,6 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
   listening: 'Te escucho, dime qué necesitas',
   unsupported: 'Comandos de voz no disponibles en este navegador',
   error: 'No se pudo activar el micrófono',
+  degraded: 'El micrófono está fallando seguido — revisa tu conexión o inténtalo de nuevo',
 };
 
 export default function AssistantScreen() {
@@ -41,6 +45,8 @@ export default function AssistantScreen() {
   const [voiceReplies, setVoiceReplies] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [replyEmotion, setReplyEmotion] = useState<Emotion | undefined>(undefined);
+  const [talkPulse, setTalkPulse] = useState(0);
   const listRef = useRef<FlatList>(null);
   const sendingRef = useRef(false);
   const { speak, cancel: cancelSpeech, supported: speechSupported } = useSpeak();
@@ -53,10 +59,12 @@ export default function AssistantScreen() {
     setError(null);
     try {
       const reply = await sendAssistantMessage(workspace.id, profile.uid, text.trim());
+      setReplyEmotion(detectEmotionFromText(reply));
       if (voiceReplies && speechSupported) {
         wakeWord.pause();
         speak(reply, {
           onStart: () => setIsSpeaking(true),
+          onBoundary: () => setTalkPulse((v) => v + 1),
           onEnd: () => {
             setIsSpeaking(false);
             wakeWord.resume();
@@ -74,6 +82,29 @@ export default function AssistantScreen() {
   const wakeWord = useWakeWord({ onCommand: (command) => handleSendText(command) });
   // La pantalla no se apaga mientras Gaby está escuchando, para que "Hey Gaby" siga funcionando.
   useWakeLock(wakeWord.enabled);
+  const pushToTalk = usePushToTalk();
+
+  // Respaldo cuando el navegador no tiene reconocimiento de voz nativo, o cuando lo
+  // tiene pero está fallando seguido (ver useWakeWord, estado "degraded").
+  const showPushToTalk = !wakeWord.supported || wakeWord.status === 'degraded';
+
+  const handlePushToTalkPressIn = async () => {
+    try {
+      await pushToTalk.startRecording();
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo activar el micrófono.');
+    }
+  };
+
+  const handlePushToTalkPressOut = async () => {
+    if (!pushToTalk.isRecording) return;
+    try {
+      const text = await pushToTalk.stopAndTranscribe();
+      if (text) handleSendText(text);
+    } catch (e: any) {
+      setError(`No se pudo transcribir (${e?.code ?? 'error'}): ${e?.message ?? e}`);
+    }
+  };
 
   useEffect(() => {
     if (!workspace) return;
@@ -124,13 +155,17 @@ export default function AssistantScreen() {
     ? 'listening'
     : 'idle';
 
-  // Emociones que reemplazan a la de `orbState` cuando algo sale mal.
+  // Emociones que reemplazan a la de `orbState`: primero lo que sale mal, y si no
+  // hay nada de eso, la que se detectó en el texto de la última respuesta mientras
+  // la está diciendo (ver detectEmotionFromText) — no siempre "feliz" al hablar.
   const emotionOverride: Emotion | undefined = error
     ? 'tristeza'
     : wakeWord.status === 'error'
     ? 'enojo'
-    : wakeWord.status === 'unsupported'
+    : wakeWord.status === 'degraded' || wakeWord.status === 'unsupported'
     ? 'confundido'
+    : isSpeaking
+    ? replyEmotion
     : undefined;
 
   return (
@@ -156,13 +191,30 @@ export default function AssistantScreen() {
             iconColor={voiceReplies ? colors.accent : colors.textMuted}
             onPress={toggleVoiceReplies}
           />
-          <IconButton
-            icon={wakeWord.enabled ? 'microphone' : 'microphone-off'}
-            mode="contained"
-            containerColor="rgba(255,255,255,0.06)"
-            iconColor={wakeWord.enabled ? colors.accent : colors.textMuted}
-            onPress={toggleVoiceMode}
-          />
+          {showPushToTalk ? (
+            <Pressable
+              onPressIn={handlePushToTalkPressIn}
+              onPressOut={handlePushToTalkPressOut}
+              style={[
+                styles.pushToTalkButton,
+                (pushToTalk.isRecording || pushToTalk.isTranscribing) && styles.pushToTalkButtonActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={pushToTalk.isTranscribing ? 'dots-horizontal' : pushToTalk.isRecording ? 'microphone' : 'microphone-outline'}
+                size={22}
+                color={pushToTalk.isRecording || pushToTalk.isTranscribing ? colors.accent : colors.textMuted}
+              />
+            </Pressable>
+          ) : (
+            <IconButton
+              icon={wakeWord.enabled ? 'microphone' : 'microphone-off'}
+              mode="contained"
+              containerColor="rgba(255,255,255,0.06)"
+              iconColor={wakeWord.enabled ? colors.accent : colors.textMuted}
+              onPress={toggleVoiceMode}
+            />
+          )}
           <IconButton
             icon={showChat ? 'message-text' : 'message-text-outline'}
             mode="contained"
@@ -173,7 +225,13 @@ export default function AssistantScreen() {
         </View>
 
         <Text style={styles.statusText} numberOfLines={1}>
-          {STATUS_LABEL[wakeWord.status] ?? STATUS_LABEL.idle}
+          {pushToTalk.isTranscribing
+            ? 'Transcribiendo…'
+            : pushToTalk.isRecording
+            ? 'Suelta cuando termines de hablar…'
+            : showPushToTalk
+            ? 'Mantén presionado el micrófono para hablarle'
+            : STATUS_LABEL[wakeWord.status] ?? STATUS_LABEL.idle}
         </Text>
 
         {error && (
@@ -189,6 +247,7 @@ export default function AssistantScreen() {
             size={showChat ? 190 : Math.min(windowWidth * 0.82, 380)}
             tiltX={deviceTiltX}
             tiltY={deviceTiltY}
+            talkPulse={talkPulse}
           />
         </View>
 
@@ -276,6 +335,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusText: { color: colors.textMuted, textAlign: 'center', marginTop: 4, fontSize: 13 },
+  pushToTalkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  pushToTalkButtonActive: { backgroundColor: 'rgba(122,169,255,0.18)' },
   avatarArea: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 220 },
   transcriptWrap: { minHeight: 130, maxHeight: 220 },
   list: { paddingHorizontal: 20, paddingBottom: 8, flexGrow: 1, justifyContent: 'flex-end' },

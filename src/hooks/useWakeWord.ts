@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-export type WakeWordStatus = 'idle' | 'listening' | 'unsupported' | 'error';
+export type WakeWordStatus = 'idle' | 'listening' | 'unsupported' | 'error' | 'degraded';
 
 interface UseWakeWordOptions {
   onCommand: (command: string) => void;
@@ -17,6 +17,13 @@ const FATAL_ERRORS = new Set(['not-allowed', 'audio-capture', 'service-not-allow
 // reconocimiento de voz se "colgó" (bug conocido de Android Chrome) y lo reiniciamos
 // desde cero en vez de quedarnos escuchando en silencio para siempre.
 const WATCHDOG_MS = 20000;
+
+// Si se acumulan varios errores transitorios ('no-speech', 'aborted', 'network') en
+// poco tiempo, algo anda raro con el micrófono/conexión aunque ninguno sea fatal por
+// sí solo — en vez de reintentar en silencio para siempre (y que el usuario piense
+// que Gaby simplemente no le hace caso), lo mostramos como "degraded".
+const DEGRADED_WINDOW_MS = 30000;
+const DEGRADED_THRESHOLD = 5;
 
 function normalize(text: string): string {
   return text
@@ -40,6 +47,7 @@ export function useWakeWord({ onCommand, lang = 'es-MX' }: UseWakeWordOptions) {
   const enabledRef = useRef(false);
   const pausedRef = useRef(false);
   const lastActivityRef = useRef(0);
+  const transientErrorsRef = useRef<number[]>([]);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCommandRef = useRef(onCommand);
@@ -89,6 +97,7 @@ export function useWakeWord({ onCommand, lang = 'es-MX' }: UseWakeWordOptions) {
 
     recognition.onresult = (event) => {
       touch();
+      transientErrorsRef.current = [];
       const last = event.results[event.results.length - 1];
       const transcript = normalize(last?.[0]?.transcript ?? '');
       if (!transcript) return;
@@ -101,8 +110,18 @@ export function useWakeWord({ onCommand, lang = 'es-MX' }: UseWakeWordOptions) {
       console.warn('useWakeWord: error de reconocimiento de voz:', event?.error);
       if (FATAL_ERRORS.has(event?.error ?? '')) {
         setStatus('error');
+        return;
       }
-      // Errores transitorios ('no-speech', 'aborted', 'network') se recuperan solos en onend.
+      // Ninguno es fatal por sí solo, pero si se acumulan muchos en poco tiempo el
+      // micrófono probablemente no está funcionando bien de verdad — avisamos en vez
+      // de seguir reintentando en silencio para siempre.
+      const now = Date.now();
+      transientErrorsRef.current = [...transientErrorsRef.current, now].filter(
+        (ts) => now - ts < DEGRADED_WINDOW_MS,
+      );
+      if (transientErrorsRef.current.length >= DEGRADED_THRESHOLD) {
+        setStatus('degraded');
+      }
     };
 
     recognition.onend = () => {
@@ -123,6 +142,7 @@ export function useWakeWord({ onCommand, lang = 'es-MX' }: UseWakeWordOptions) {
     recognitionRef.current = recognition;
     enabledRef.current = true;
     pausedRef.current = false;
+    transientErrorsRef.current = [];
     setEnabled(true);
     setStatus('listening');
     touch();
