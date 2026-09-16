@@ -41,16 +41,18 @@ jobs:
           defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 
       - name: Compilar (sin firma, para simulador)
-        # "generic/platform=iOS Simulator" no era la causa real del error de
-        # macros (esa fue la versión de swift-syntax, ya fijada arriba) —
-        # sí es la forma correcta y estable de decirle a xcodebuild "solo
-        # compila, no elijas ni necesites un simulador concreto ya creado",
-        # que varía de un runner/imagen a otro.
+        # Sin "-sdk iphonesimulator" a propósito: ese flag impone el SDK del
+        # simulador a TODOS los targets del grafo, incluido el ejecutable del
+        # plugin de macros (MacroPlugin, de MetaCodable), que tiene que correr
+        # en la Mac durante la compilación. Compilado contra el SDK del
+        # simulador, dyld se niega a ejecutarlo ("DYLD_ROOT_PATH not set for
+        # simulator program") y el compilador lo reporta como "produced
+        # malformed response". El destino solo describe para qué se compila la
+        # app, y deja que las herramientas del host se compilen para macOS.
         working-directory: ios-native
         run: |
           xcodebuild build \
             -project Scowld.xcodeproj \
             -scheme Scowld \
-            -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO
