@@ -12,8 +12,8 @@ export const STATE_EMOTION: Record<OrbState, Emotion> = {
 };
 
 /** Paleta de color + velocidad de "respiración" por emoción, usada tanto por el
- * rostro vectorial (GabyOrb, respaldo nativo) como por la malla de partículas
- * (GabyParticleFace, la cara real en web). */
+ * rostro vectorial (GabyOrb, respaldo nativo) como por el orbe de partículas
+ * (GabyParticleOrb, la forma real de Gaby en web). */
 export const EMOTION_META: Record<Emotion, { colors: [string, string]; speed: number }> = {
   neutral: { colors: [colors.accent, colors.primary], speed: 2600 },
   feliz: { colors: [colors.success, colors.accent], speed: 1800 },
