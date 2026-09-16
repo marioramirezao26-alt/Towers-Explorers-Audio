@@ -30,6 +30,16 @@ jobs:
         working-directory: ios-native
         run: cp Scowld/Core/Secrets.swift.example Scowld/Core/Secrets.swift
 
+      - name: Confiar en los plugins de macros SPM (sin diálogo interactivo)
+        # Xcode pide confirmar "Trust and Enable" la primera vez que un paquete
+        # usa un macro/build-tool plugin (aquí, MetaCodable, dependencia
+        # transitiva de swift-realtime-openai). En CI no hay diálogo posible,
+        # así que se aprueba de antemano vía defaults — es el mecanismo que
+        # usa Xcode mismo para recordar el consentimiento entre builds.
+        run: |
+          defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+          defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+
       - name: Compilar (sin firma, para simulador)
         working-directory: ios-native
         run: |
