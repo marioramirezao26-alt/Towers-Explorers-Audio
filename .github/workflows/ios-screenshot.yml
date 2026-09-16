@@ -58,7 +58,11 @@ jobs:
           # Se conceden los permisos de antemano para que los diálogos del
           # sistema no tapen la pantalla en las capturas.
           xcrun simctl privacy "${{ steps.sim.outputs.udid }}" grant all com.marioramirez.gaby || true
-          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.marioramirez.gaby
+          # Se marca la bienvenida como vista para que las capturas muestren la
+          # pantalla principal (la cara de Gaby) y no la de bienvenida: simctl
+          # no puede tocar la pantalla, así que no hay forma de pasarla a mano.
+          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.marioramirez.gaby \
+            -startup_onboarding_completed YES
 
       - name: Tomar las capturas
         # Sin "-e": si la app falla, igual queremos la captura y el log para
