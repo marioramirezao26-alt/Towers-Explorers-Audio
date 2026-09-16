@@ -1,5 +1,4 @@
 import SwiftUI
-import StoreKit
 
 @main
 struct ScowldApp: App {
@@ -82,17 +81,10 @@ struct ScowldRootView: View {
 
 struct AboutView: View {
     @Environment(\.openURL) private var openURL
-    @Environment(\.requestReview) private var requestReview
     @Binding var updateState: AppUpdateState
 
-    private let websiteURL = URL(string: "https://scowld.xyz")!
-    private let privacyURL = URL(string: "https://scowld.xyz/privacy")!
-    private let termsURL = URL(string: "https://scowld.xyz/terms")!
-    private let productHuntURL = URL(string: "https://www.producthunt.com/products/scowld")!
+    /// Único enlace que queda de Scowld: el crédito que pide su licencia MIT.
     private let githubRepoURL = URL(string: "https://github.com/apoorvdarshan/scowld")!
-    private let githubIssuesURL = URL(string: "https://github.com/apoorvdarshan/scowld/issues")!
-    private let contactURL = URL(string: "mailto:ad13dtu@gmail.com?subject=Scowld%20Contact")!
-    private let developerXURL = URL(string: "https://x.com/apoorvdarshan")!
 
     var body: some View {
         NavigationStack {
@@ -111,109 +103,23 @@ struct AboutView: View {
                             handleUpdateTap()
                         }
 
-                        aboutActionRow(title: "Rate Scowld", systemImage: "star.fill") {
-                            requestReview()
-                        }
-
-                        linkRow(
-                            title: "Star on GitHub",
-                            subtitle: "github.com/apoorvdarshan/scowld",
-                            systemImage: "star.circle.fill",
-                            url: githubRepoURL
-                        )
-
-                        ShareLink(item: websiteURL) {
-                            aboutRowContent(
-                                title: "Share Scowld",
-                                subtitle: "Send the app link",
-                                systemImage: "square.and.arrow.up",
-                                trailing: .chevron
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        linkRow(
-                            title: "Vote on Product Hunt",
-                            subtitle: "producthunt.com/products/scowld",
-                            systemImage: "arrow.up.circle.fill",
-                            url: productHuntURL
+                        aboutInfoRow(
+                            title: "Gaby en la web",
+                            subtitle: "gaby-c76cf.web.app",
+                            systemImage: "globe"
                         )
                     }
 
-                    aboutSection("Contact", icon: "envelope") {
+                    // La licencia MIT de Scowld pide conservar su atribución, así
+                    // que el crédito se queda — lo que se quitó fueron sus enlaces
+                    // de promoción (Product Hunt, Instagram, el correo y la cuenta
+                    // de X del autor), que no corresponden a esta app.
+                    aboutSection("Créditos", icon: "doc.plaintext") {
                         linkRow(
-                            title: "Report an Issue",
-                            subtitle: "github.com/apoorvdarshan/scowld/issues",
-                            systemImage: "exclamationmark.bubble.fill",
-                            url: githubIssuesURL
-                        )
-
-                        linkRow(
-                            title: "Request a Feature",
-                            subtitle: "github.com/apoorvdarshan/scowld/issues",
-                            systemImage: "sparkles",
-                            url: githubIssuesURL
-                        )
-
-                        linkRow(
-                            title: "Contact",
-                            subtitle: "ad13dtu@gmail.com",
-                            systemImage: "envelope.fill",
-                            url: contactURL
-                        )
-                    }
-
-                    aboutSection("Social", icon: "link") {
-                        linkRow(
-                            title: "Instagram",
-                            subtitle: "@scowld_",
-                            systemImage: "camera.fill",
-                            url: URL(string: "https://www.instagram.com/scowld_/")!
-                        )
-
-                        linkRow(
-                            title: "Meet the Developer on X",
-                            subtitle: "@apoorvdarshan",
-                            systemImage: "person.crop.circle.fill",
-                            url: developerXURL
-                        )
-                    }
-
-                    aboutSection("Credits", icon: "doc.plaintext") {
-                        linkRow(
-                            title: "Open Source on GitHub",
-                            subtitle: "github.com/apoorvdarshan/scowld",
+                            title: "Basada en Scowld",
+                            subtitle: "github.com/apoorvdarshan/scowld (MIT)",
                             systemImage: "chevron.left.forwardslash.chevron.right",
                             url: githubRepoURL
-                        )
-
-                        linkRow(
-                            title: "Star the Repo",
-                            subtitle: "Support the project on GitHub",
-                            systemImage: "star.fill",
-                            url: githubRepoURL
-                        )
-
-                        aboutInfoRow(
-                            title: "Character model",
-                            subtitle: "Arbius AI (MIT)",
-                            systemImage: "cube.fill"
-                        )
-                    }
-
-                    aboutSection("Legal", icon: "checkmark.shield.fill") {
-                        linkRow(
-                            title: "Privacy Policy",
-                            subtitle: "scowld.xyz/privacy",
-                            systemImage: "hand.raised.fill",
-                            url: privacyURL
-                        )
-
-                        linkRow(
-                            title: "Terms of Service",
-                            subtitle: "scowld.xyz/terms",
-                            systemImage: "doc.text.fill",
-                            url: termsURL
                         )
                     }
                 }
@@ -296,24 +202,23 @@ struct AboutView: View {
 
     private var headerCard: some View {
         HStack(spacing: 14) {
-            Image("ScowldLogo")
+            // Sin imagen de logo: el de Scowld no se copió (por licencia) y
+            // dejaba un recuadro vacío. Hasta que haya uno propio, el símbolo
+            // del sistema se ve intencional en vez de roto.
+            Image(systemName: "waveform.circle.fill")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(.white.opacity(0.16), lineWidth: 1)
-                )
+                .foregroundStyle(Color.amicaBlue)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Scowld")
+                Text("Gaby")
                     .font(.title2.bold())
                     .foregroundStyle(.primary)
                 Text(versionDisplay)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text("AI voice companion")
+                Text("Tu asistente")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

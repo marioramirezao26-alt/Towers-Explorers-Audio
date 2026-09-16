@@ -335,7 +335,7 @@ struct SettingsView: View {
         settingsSection(
             "BYOK AI",
             icon: "brain.head.profile",
-            footer: "Scowld sends chat and optional vision requests directly to your selected provider using the key saved in Keychain."
+            footer: "Solo se usan si no configuraste el backend de Gaby (Secrets.swift). Con Gaby configurada, las peticiones van a tu Cloud Function y no se necesita ninguna clave aquí."
         ) {
             settingRow {
                 Picker("Provider", selection: $selectedAIProviderID) {

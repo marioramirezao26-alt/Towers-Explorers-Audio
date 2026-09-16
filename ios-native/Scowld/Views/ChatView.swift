@@ -47,7 +47,7 @@ struct ChatView: View {
 
             // Glass input bar
             HStack(spacing: 10) {
-                TextField("Message Scowld...", text: $inputText)
+                TextField("Escríbele a Gaby…", text: $inputText)
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)

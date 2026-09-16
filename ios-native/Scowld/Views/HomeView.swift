@@ -194,7 +194,7 @@ struct HomeView: View {
                 .padding(.bottom, 126)
                 .allowsHitTesting(false)
             }
-            .navigationTitle("Scowld")
+            .navigationTitle("Gaby")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
