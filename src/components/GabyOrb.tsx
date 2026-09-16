@@ -3,11 +3,14 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, LinearGradient, Path, Stop, Circle, Rect } from 'react-native-svg';
 import { colors } from '@/theme';
 import GabyVrmFace from './GabyVrmFace';
+import GabyParticleFace from './GabyParticleFace';
 import { Emotion, EMOTION_META, OrbState, STATE_EMOTION } from './gabyOrbShared';
 
 // Configurable por variable de entorno para no tocar código cuando consigas un
 // modelo VRM propio — ver GabyVrmFace.tsx para de dónde sacar uno con licencia
-// que sí te permita usarlo aquí (VRoid Studio, por ejemplo).
+// que sí te permita usarlo aquí (VRoid Studio, por ejemplo). Mientras no exista,
+// la cara real es la malla de partículas (GabyParticleFace) — el visor VRM sin
+// modelo cargado no es una cara, es solo una figura de prueba del motor 3D.
 const VRM_MODEL_URL = process.env.EXPO_PUBLIC_VRM_MODEL_URL;
 
 export type { Emotion, OrbState } from './gabyOrbShared';
@@ -143,14 +146,17 @@ function Face({ emotion }: { emotion: Emotion }) {
 }
 
 /**
- * Presencia flotante de Gaby. En web (la plataforma real de la app) el rostro es
- * GabyVrmFace: un avatar VRM 3D real (Three.js + three-vrm), o un marcador de
- * posición mientras no haya un modelo VRM configurado. El busto cyborg/androide
- * vectorial (SVG) de aquí abajo queda como respaldo para cuando se abre en Expo Go
- * / nativo, donde no hay <canvas>/WebGL del DOM disponible — ese es el siguiente
- * paso (un WebView, como hace Scowld). En ambos casos este componente pone el halo
- * ambiental y el movimiento (respirar, flotar, girar, inclinarse con el sensor del
- * teléfono) alrededor del rostro.
+ * Presencia flotante de Gaby. En web (la plataforma real de la app) el rostro por
+ * defecto es GabyParticleFace: una malla de puntos y líneas brillantes (canvas),
+ * el look de "red neuronal" que se pidió explícitamente. Si se configura
+ * EXPO_PUBLIC_VRM_MODEL_URL con un modelo VRM propio, se usa en su lugar
+ * GabyVrmFace (avatar 3D real, Three.js + three-vrm, inspirado en Scowld) — pero
+ * nunca a medias: sin modelo, la cara sigue siendo la malla de partículas, no un
+ * marcador de posición genérico. El busto cyborg/androide vectorial (SVG) de aquí
+ * abajo queda como respaldo para cuando se abre en Expo Go/nativo, donde no hay
+ * <canvas>/WebGL del DOM disponible. En todos los casos este componente pone el
+ * halo ambiental y el movimiento (respirar, flotar, girar, inclinarse con el
+ * sensor del teléfono) alrededor del rostro.
  */
 export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, tiltY, talkPulse }: Props) {
   const emotion = emotionOverride ?? STATE_EMOTION[state];
@@ -284,7 +290,11 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
         }}
       >
         {Platform.OS === 'web' ? (
-          <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} talkPulse={talkPulse} />
+          VRM_MODEL_URL ? (
+            <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} talkPulse={talkPulse} />
+          ) : (
+            <GabyParticleFace state={state} emotion={emotion} size={size} />
+          )
         ) : (
         <Svg width={size} height={size} viewBox="0 0 200 250">
           <Defs>
