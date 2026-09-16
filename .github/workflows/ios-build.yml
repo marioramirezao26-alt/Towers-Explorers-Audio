@@ -41,11 +41,16 @@ jobs:
           defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 
       - name: Compilar (sin firma, para simulador)
+        # Un destino "generic/platform=iOS Simulator" hace que el build system
+        # compile el plugin de macro (MacroPlugin, de MetaCodable) contra el
+        # SDK del simulador en vez de macOS — el plugin corre como proceso del
+        # host durante la compilación, así que con el SDK equivocado el
+        # compilador lo ve como "malformed response". Un destino concreto de
+        # simulador evita esa ambigüedad.
         working-directory: ios-native
         run: |
           xcodebuild build \
             -project Scowld.xcodeproj \
             -scheme Scowld \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
+            -destination "platform=iOS Simulator,name=iPhone 16" \
             CODE_SIGNING_ALLOWED=NO
