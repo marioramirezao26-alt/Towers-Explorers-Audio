@@ -1,0 +1,81 @@
+name: Captura de Gaby en el simulador
+
+# Arranca un iPhone simulado en la Mac de GitHub Actions, instala la app y le
+# toma fotos de la pantalla. Es la forma de ver la app nativa corriendo sin
+# tener (ni alquilar) una Mac: las capturas quedan como "artifact" del run,
+# descargables desde la pestaña Actions del repo.
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "ios-native/**"
+      - ".github/workflows/ios-screenshot.yml"
+
+jobs:
+  captura:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Usar Secrets de ejemplo (placeholders vacíos, no reales)
+        working-directory: ios-native
+        run: cp Scowld/Core/Secrets.swift.example Scowld/Core/Secrets.swift
+
+      - name: Confiar en los plugins de macros SPM
+        run: |
+          defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+          defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+
+      - name: Compilar para el simulador
+        working-directory: ios-native
+        run: |
+          xcodebuild build \
+            -project Scowld.xcodeproj \
+            -scheme Scowld \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Elegir y arrancar un iPhone simulado
+        id: sim
+        run: |
+          # El catálogo de simuladores cambia entre imágenes de runner, así que
+          # se toma el primer iPhone disponible en vez de fijar un modelo.
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(x['udid'] for rt in d for x in d[rt] if x['name'].startswith('iPhone')))")
+          echo "Simulador: $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Instalar y abrir Gaby
+        working-directory: ios-native
+        run: |
+          APP=$(find build/Build/Products -name "Scowld.app" -type d | head -1)
+          echo "App: $APP"
+          xcrun simctl install "${{ steps.sim.outputs.udid }}" "$APP"
+          # Se conceden los permisos de antemano para que los diálogos del
+          # sistema no tapen la pantalla en las capturas.
+          xcrun simctl privacy "${{ steps.sim.outputs.udid }}" grant all com.marioramirez.gaby || true
+          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.marioramirez.gaby
+
+      - name: Tomar las capturas
+        # Sin "-e": si la app falla, igual queremos la captura y el log para
+        # poder diagnosticar qué pasó.
+        shell: bash {0}
+        run: |
+          mkdir -p capturas
+          for i in 1 2 3; do
+            sleep 8
+            xcrun simctl io "${{ steps.sim.outputs.udid }}" screenshot "capturas/gaby-$i.png"
+            echo "captura $i lista"
+          done
+          xcrun simctl spawn "${{ steps.sim.outputs.udid }}" log show --last 2m --predicate 'processImagePath CONTAINS "Scowld"' > capturas/log-de-la-app.txt 2>&1
+          ls -la capturas
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gaby-en-el-simulador
+          path: capturas/
