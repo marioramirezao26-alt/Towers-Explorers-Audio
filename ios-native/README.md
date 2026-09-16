@@ -13,8 +13,14 @@ Esto es un **esqueleto sin terminar**, todavía no es una app funcional:
   existe para la web (`src/components/GabyVrmFace.tsx` en la raíz del repo).
 - Los proveedores de IA/voz propios de Scowld (`Scowld/AI/`, `Scowld/Core/CloudSTTProvider.swift`,
   etc.) siguen ahí tal cual se copiaron — todavía no están conectados a las
-  Cloud Functions de Gaby (`deviceCommand`, `researchWithOpenAI`) ni a
-  swift-realtime-openai.
+  Cloud Functions de Gaby ni a swift-realtime-openai (ya agregado como
+  dependencia SPM, ver `THIRD_PARTY_NOTICES.md`).
+- **`GabyBackendClient.swift`** (`Scowld/Core/`) ya sabe hablar con
+  `deviceCommand` (la misma Cloud Function que usa el Stack-chan) — falta
+  llamarlo desde la UI (`HomeView.swift`) en vez de los proveedores de IA de
+  Scowld. Necesita `Secrets.swift` (copia `Scowld/Core/Secrets.swift.example`
+  y completa tus datos — está en `.gitignore`, nunca lo subas con valores
+  reales).
 - No tiene firma de código configurada (`DEVELOPMENT_TEAM` vacío) — hay que
   abrirlo en Xcode con tu propia cuenta de Apple y seleccionar tu equipo antes
   de poder instalarlo en un iPhone.
@@ -31,7 +37,8 @@ macOS de GitHub Actions en cada push que lo toque — revisa la pestaña
 Mac remota)
 
 ```bash
-open ios-native/Scowld.xcodeproj
+cp Scowld/Core/Secrets.swift.example Scowld/Core/Secrets.swift  # completa tus datos ahí
+open Scowld.xcodeproj
 ```
 
 Selecciona tu equipo de firma en "Signing & Capabilities" antes de compilar

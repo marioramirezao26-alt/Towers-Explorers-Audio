@@ -26,6 +26,10 @@ jobs:
       - name: Mostrar versión de Xcode disponible
         run: xcodebuild -version
 
+      - name: Usar Secrets de ejemplo (placeholders vacíos, no reales)
+        working-directory: ios-native
+        run: cp Scowld/Core/Secrets.swift.example Scowld/Core/Secrets.swift
+
       - name: Compilar (sin firma, para simulador)
         working-directory: ios-native
         run: |
