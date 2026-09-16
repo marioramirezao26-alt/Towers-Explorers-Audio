@@ -1,0 +1,37 @@
+name: iOS build check
+
+# Compila el proyecto de ios-native/ en un runner de macOS de GitHub, para saber
+# si el código Swift compila sin necesitar una Mac propia — el CI es el único
+# lugar donde se verifica esto hasta que se prueba en una Mac real (Xcode/EAS).
+# Sin firma (CODE_SIGNING_ALLOWED=NO): solo confirma que compila, no genera un
+# build instalable — para eso sí hace falta una Mac con una cuenta de Apple.
+
+on:
+  push:
+    paths:
+      - "ios-native/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "ios-native/**"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mostrar versión de Xcode disponible
+        run: xcodebuild -version
+
+      - name: Compilar (sin firma, para simulador)
+        working-directory: ios-native
+        run: |
+          xcodebuild build \
+            -project Scowld.xcodeproj \
+            -scheme Scowld \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO
