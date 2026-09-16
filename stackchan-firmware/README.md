@@ -1,8 +1,8 @@
 # Stack-chan de Gaby
 
 Firmware para darle a Gaby un cuerpo físico: un [Stack-chan](https://github.com/meganetaaan/stack-chan)
-armado sobre un **M5Stack Core2** con cuello de 2 servos, que le manda tus pedidos
-al backend de Gaby (Firebase) y muestra la respuesta en pantalla.
+armado sobre un **M5Stack Core2** o **CoreS3** con cuello de 2 servos, que le
+manda tus pedidos al backend de Gaby (Firebase) y muestra la respuesta en pantalla.
 
 > **Nota:** el repo "oficial" de Stack-chan usa Moddable SDK (JavaScript embebido),
 > un entorno bastante más pesado de instalar. Este firmware usa en cambio
@@ -12,8 +12,15 @@ al backend de Gaby (Firebase) y muestra la respuesta en pantalla.
 
 ## Qué necesitas
 
-- **M5Stack Core2** (o Core S3).
-- **Kit de cuello Stack-chan**: 2 servos SG90 + soporte (comprado o impreso en 3D).
+- **M5Stack Core2**, o **M5Stack CoreS3** (ESP32-S3, la que suelen vender como
+  kit "StackChan Core" — trae doble micrófono y bocina integrados, mejor punto
+  de partida si luego quieres agregar voz real). Cualquiera de las dos sirve,
+  `platformio.ini` ya trae un entorno para cada una (`m5stack-core2` /
+  `m5stack-cores3`). **Ojo:** varios kits solo incluyen la placa (el "cuerpo"
+  con pantalla/mic/bocina) y venden el cuello con servos aparte — revisa la
+  descripción de lo que estás comprando.
+- **Kit de cuello Stack-chan**: 2 servos SG90 + soporte (comprado o impreso en
+  3D), si no vino incluido con tu placa.
 - [VS Code](https://code.visualstudio.com/) + extensión **PlatformIO IDE**.
 - Cable USB-C.
 
@@ -36,7 +43,9 @@ al backend de Gaby (Firebase) y muestra la respuesta en pantalla.
    deploy, o la consola de Firebase → Functions.
 
 3. Abre esta carpeta (`stackchan-firmware/`) en VS Code con PlatformIO, conecta
-   el Core2 por USB, y dale "Upload" (ícono de flecha en la barra inferior).
+   tu placa por USB, elige el entorno correcto en la barra inferior
+   (`m5stack-core2` o `m5stack-cores3` según tu hardware) y dale "Upload"
+   (ícono de flecha).
 
 ## Qué hace la v1
 
@@ -53,9 +62,10 @@ lado de la app en JavaScript, no está portado a este firmware todavía).
 
 ## Próximos pasos posibles
 
-- Cambiar el botón de prueba por un micrófono I2S + reconocimiento de voz (el
-  Core2 trae micrófono integrado).
-- Reproducir la respuesta por el altavoz del Core2 (con un audio generado por
+- Cambiar el botón de prueba por un micrófono real + reconocimiento de voz (el
+  Core2 y el CoreS3 traen micrófono integrado; el CoreS3 además trae doble
+  micrófono, mejor para eso).
+- Reproducir la respuesta por el altavoz integrado (con un audio generado por
   algún servicio de texto a voz, descargado y reproducido vía I2S).
 - Portar el router local de citas/notas (`src/services/localAssistant.ts` en
   la raíz del repo) al backend, para que el robot también pueda agendar/anotar
