@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BA0001010000000000000001 /* RealtimeAPI in Frameworks */ = {isa = PBXBuildFile; productRef = BA0001010000000000000002 /* RealtimeAPI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		BA82249B2F6521F9002E853D /* Scowld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scowld.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BA0001010000000000000001 /* RealtimeAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Scowld;
 			packageProductDependencies = (
+				BA0001010000000000000002 /* RealtimeAPI */,
 			);
 			productName = Scowld;
 			productReference = BA82249B2F6521F9002E853D /* Scowld.app */;
@@ -116,6 +122,7 @@
 			mainGroup = BA8224922F6521F9002E853D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				BA0001010000000000000003 /* XCRemoteSwiftPackageReference "swift-realtime-openai" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BA82249C2F6521F9002E853D /* Products */;
@@ -373,6 +380,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BA0001010000000000000003 /* XCRemoteSwiftPackageReference "swift-realtime-openai" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/m1guelpf/swift-realtime-openai";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BA0001010000000000000002 /* RealtimeAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA0001010000000000000003 /* XCRemoteSwiftPackageReference "swift-realtime-openai" */;
+			productName = RealtimeAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BA8224932F6521F9002E853D /* Project object */;
 }
