@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		BA0001010000000000000001 /* RealtimeAPI in Frameworks */ = {isa = PBXBuildFile; productRef = BA0001010000000000000002 /* RealtimeAPI */; };
+		BA0001010000000000000006 /* SwiftSyntax in Frameworks */ = {isa = PBXBuildFile; productRef = BA0001010000000000000005 /* SwiftSyntax */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BA0001010000000000000001 /* RealtimeAPI in Frameworks */,
+				BA0001010000000000000006 /* SwiftSyntax in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = Scowld;
 			packageProductDependencies = (
 				BA0001010000000000000002 /* RealtimeAPI */,
+				BA0001010000000000000005 /* SwiftSyntax */,
 			);
 			productName = Scowld;
 			productReference = BA82249B2F6521F9002E853D /* Scowld.app */;
@@ -123,6 +126,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				BA0001010000000000000003 /* XCRemoteSwiftPackageReference "swift-realtime-openai" */,
+				BA0001010000000000000004 /* XCRemoteSwiftPackageReference "swift-syntax" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BA82249C2F6521F9002E853D /* Products */;
@@ -390,6 +394,14 @@
 				branch = main;
 			};
 		};
+		BA0001010000000000000004 /* XCRemoteSwiftPackageReference "swift-syntax" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/swiftlang/swift-syntax.git";
+			requirement = {
+				kind = exactVersion;
+				version = 601.0.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -397,6 +409,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BA0001010000000000000003 /* XCRemoteSwiftPackageReference "swift-realtime-openai" */;
 			productName = RealtimeAPI;
+		};
+		BA0001010000000000000005 /* SwiftSyntax */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA0001010000000000000004 /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			productName = SwiftSyntax;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
