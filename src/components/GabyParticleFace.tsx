@@ -1,27 +1,130 @@
 import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Emotion, EMOTION_META, OrbState } from './gabyOrbShared';
 
 interface Props {
   state: OrbState;
   emotion: Emotion;
   size: number;
+  /** Se incrementa en cada límite de palabra real del habla — ver useSpeak.onBoundary. */
+  talkPulse?: number;
 }
 
-// Espacio virtual en el que se generan los puntos (independiente del tamaño real
-// en pantalla) — luego se escala a `size` al dibujar.
-const BASE = 200;
-const CENTER = BASE / 2;
-
-interface Point {
-  baseX: number;
-  baseY: number;
-  radius: number;
+interface PointSpec {
+  x: number;
+  y: number;
+  z: number;
   isEye: boolean;
   isMouth: boolean;
-  glow: number; // intensidad relativa del brillo (0..1)
-  phase: number; // fase del "flotar" individual, para que no se muevan todos igual
-  freq: number;
-  amp: number;
+  size: number;
+  brightness: number;
+}
+
+// Dimensiones de la "cabeza" en unidades de mundo — más angosta que alta, con algo
+// de profundidad real (no es un plano) para que se vea como un busto 3D de verdad
+// al rotar, como la referencia.
+const RX = 0.55;
+const RY = 0.78;
+const RZ = 0.62;
+
+/** Distribución pareja de puntos sobre una esfera (algoritmo de Fibonacci), luego
+ * escalada a la elipsoide de la cabeza — da una nube de puntos con volumen real. */
+function fibonacciSphere(count: number): { x: number; y: number; z: number }[] {
+  const points: { x: number; y: number; z: number }[] = [];
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / Math.max(1, count - 1)) * 2;
+    const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * i;
+    points.push({ x: Math.cos(theta) * radiusAtY, y, z: Math.sin(theta) * radiusAtY });
+  }
+  return points;
+}
+
+function buildPoints(): PointSpec[] {
+  const points: PointSpec[] = [];
+
+  // Volumen general de la cabeza.
+  for (const p of fibonacciSphere(230)) {
+    points.push({
+      x: p.x * RX,
+      y: p.y * RY,
+      z: p.z * RZ,
+      isEye: false,
+      isMouth: false,
+      size: 0.014 + Math.random() * 0.01,
+      brightness: 0.4 + Math.random() * 0.3,
+    });
+  }
+
+  // Contorno frontal (silueta) más denso, justo al borde visible de frente — refuerza
+  // el óvalo de la cara como en la referencia.
+  const CONTOUR_COUNT = 46;
+  for (let i = 0; i < CONTOUR_COUNT; i++) {
+    const a = (i / CONTOUR_COUNT) * Math.PI * 2;
+    points.push({
+      x: Math.cos(a) * RX * (0.94 + Math.random() * 0.05),
+      y: Math.sin(a) * RY * (0.94 + Math.random() * 0.05),
+      z: RZ * (0.55 + Math.random() * 0.08),
+      isEye: false,
+      isMouth: false,
+      size: 0.016,
+      brightness: 0.55,
+    });
+  }
+
+  // Ojos: puntos brillantes, ligeramente al frente de la superficie.
+  for (const ex of [-0.32, 0.32]) {
+    for (let i = 0; i < 6; i++) {
+      const isCore = i === 0;
+      const a = (i / 6) * Math.PI * 2;
+      const r = isCore ? 0 : 0.045;
+      points.push({
+        x: ex * RX + Math.cos(a) * r,
+        y: 0.08 * RY + Math.sin(a) * r,
+        z: RZ * 0.98,
+        isEye: true,
+        isMouth: false,
+        size: isCore ? 0.03 : 0.016,
+        brightness: isCore ? 1 : 0.7,
+      });
+    }
+  }
+
+  // Puente de la nariz, protruyendo un poco hacia adelante.
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    points.push({
+      x: (Math.random() - 0.5) * 0.02,
+      y: 0.05 * RY - t * 0.28 * RY,
+      z: RZ * (0.98 + t * 0.06),
+      isEye: false,
+      isMouth: false,
+      size: 0.014,
+      brightness: 0.5,
+    });
+  }
+
+  // Boca: arco de puntos, se anima al hablar.
+  const MOUTH_COUNT = 8;
+  for (let i = 0; i < MOUTH_COUNT; i++) {
+    const t = i / (MOUTH_COUNT - 1) - 0.5;
+    points.push({
+      x: t * 0.42 * RX,
+      y: -0.42 * RY,
+      z: RZ * 0.95,
+      isEye: false,
+      isMouth: true,
+      size: 0.016,
+      brightness: 0.6,
+    });
+  }
+
+  return points;
 }
 
 interface Edge {
@@ -29,253 +132,202 @@ interface Edge {
   b: number;
 }
 
-function rand(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-/** Genera la nube de puntos que forma el rostro: silueta de la cabeza, relleno
- * interior disperso, ojos (más brillantes) y una línea de boca. */
-function generatePoints(): Point[] {
-  const points: Point[] = [];
-
-  // Silueta de la cabeza: elipse con algo de ruido para que no se vea perfecta.
-  const SIL_COUNT = 46;
-  for (let i = 0; i < SIL_COUNT; i++) {
-    const angle = (i / SIL_COUNT) * Math.PI * 2;
-    const rx = 62 + rand(-2.5, 2.5);
-    const ry = 80 + rand(-2.5, 2.5);
-    points.push({
-      baseX: CENTER + Math.cos(angle) * rx,
-      baseY: CENTER + Math.sin(angle) * ry,
-      radius: 1.3,
-      isEye: false,
-      isMouth: false,
-      glow: 0.5,
-      phase: rand(0, Math.PI * 2),
-      freq: rand(0.5, 1.1),
-      amp: rand(0.6, 1.4),
-    });
-  }
-
-  // Relleno interior: puntos dispersos dentro de la elipse (rechazo simple para
-  // que no queden pegados entre sí).
-  const inside: Point[] = [];
-  let attempts = 0;
-  while (inside.length < 110 && attempts < 4000) {
-    attempts++;
-    const x = rand(CENTER - 58, CENTER + 58);
-    const y = rand(CENTER - 74, CENTER + 74);
-    const nx = (x - CENTER) / 58;
-    const ny = (y - CENTER) / 74;
-    if (nx * nx + ny * ny > 0.82) continue; // fuera del óvalo (deja margen con la silueta)
-    const tooClose = inside.some((p) => {
-      const dx = p.baseX - x;
-      const dy = p.baseY - y;
-      return dx * dx + dy * dy < 8 * 8;
-    });
-    if (tooClose) continue;
-    inside.push({
-      baseX: x,
-      baseY: y,
-      radius: rand(0.7, 1.3),
-      isEye: false,
-      isMouth: false,
-      glow: rand(0.25, 0.5),
-      phase: rand(0, Math.PI * 2),
-      freq: rand(0.4, 1.2),
-      amp: rand(0.5, 1.6),
-    });
-  }
-  points.push(...inside);
-
-  // Ojos: un puñado de puntos por ojo, con uno más grande/brillante al centro.
-  for (const ex of [CENTER - 22, CENTER + 22]) {
-    for (let i = 0; i < 5; i++) {
-      const isCore = i === 0;
-      const a = (i / 5) * Math.PI * 2;
-      const r = isCore ? 0 : 4;
-      points.push({
-        baseX: ex + Math.cos(a) * r,
-        baseY: CENTER - 8 + Math.sin(a) * r,
-        radius: isCore ? 2.6 : 1,
-        isEye: true,
-        isMouth: false,
-        glow: isCore ? 1 : 0.6,
-        phase: rand(0, Math.PI * 2),
-        freq: rand(0.8, 1.4),
-        amp: rand(0.3, 0.7),
-      });
-    }
-  }
-
-  // Boca: arco de puntos, se anima al "hablar" y se curva un poco según la emoción.
-  const MOUTH_COUNT = 7;
-  for (let i = 0; i < MOUTH_COUNT; i++) {
-    const t = i / (MOUTH_COUNT - 1);
-    points.push({
-      baseX: CENTER - 20 + t * 40,
-      baseY: CENTER + 42,
-      radius: 1.1,
-      isEye: false,
-      isMouth: true,
-      glow: 0.55,
-      phase: rand(0, Math.PI * 2),
-      freq: rand(0.6, 1),
-      amp: rand(0.4, 0.9),
-    });
-  }
-
-  // Puente de la nariz: una mini línea vertical, le da algo de estructura central.
-  for (let i = 0; i < 4; i++) {
-    points.push({
-      baseX: CENTER + rand(-1.5, 1.5),
-      baseY: CENTER + 2 + i * 8,
-      radius: 0.9,
-      isEye: false,
-      isMouth: false,
-      glow: 0.35,
-      phase: rand(0, Math.PI * 2),
-      freq: rand(0.5, 1),
-      amp: rand(0.3, 0.8),
-    });
-  }
-
-  return points;
-}
-
-/** Conecta cada punto con sus vecinos más cercanos (hasta MAX_NEIGHBORS, dentro de
- * MAX_DIST) — así se arma la "red" de líneas sin volverse una maraña sólida. */
-function generateEdges(points: Point[]): Edge[] {
-  const MAX_DIST = 26;
+function buildEdges(points: PointSpec[]): Edge[] {
+  const MAX_DIST = 0.16;
   const MAX_NEIGHBORS = 4;
-  const edgeSet = new Set<string>();
+  const seen = new Set<string>();
   const edges: Edge[] = [];
 
   for (let i = 0; i < points.length; i++) {
-    const distances: { j: number; d: number }[] = [];
+    const candidates: { j: number; d: number }[] = [];
     for (let j = 0; j < points.length; j++) {
       if (i === j) continue;
-      const dx = points[i].baseX - points[j].baseX;
-      const dy = points[i].baseY - points[j].baseY;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d <= MAX_DIST) distances.push({ j, d });
+      const dx = points[i].x - points[j].x;
+      const dy = points[i].y - points[j].y;
+      const dz = points[i].z - points[j].z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d <= MAX_DIST) candidates.push({ j, d });
     }
-    distances.sort((a, b) => a.d - b.d);
-    for (const { j } of distances.slice(0, MAX_NEIGHBORS)) {
+    candidates.sort((a, b) => a.d - b.d);
+    for (const { j } of candidates.slice(0, MAX_NEIGHBORS)) {
       const key = i < j ? `${i}-${j}` : `${j}-${i}`;
-      if (edgeSet.has(key)) continue;
-      edgeSet.add(key);
+      if (seen.has(key)) continue;
+      seen.add(key);
       edges.push({ a: Math.min(i, j), b: Math.max(i, j) });
     }
   }
-
   return edges;
 }
 
 /**
- * Rostro de Gaby como una malla de partículas: puntos brillantes conectados por
- * líneas finas, con resplandor (glow) vía canvas — inspirado en visualizaciones de
- * "red neuronal" holográfica. Solo corre en web (usa <canvas> del DOM).
+ * Rostro de Gaby como una nube de partículas 3D real (Three.js), con resplandor
+ * (bloom) de verdad — a diferencia de una versión plana en 2D, esta sí tiene
+ * profundidad y se ve como un busto real al girar, como la referencia que pidió
+ * el usuario (cabeza translúcida de puntos y líneas brillantes).
  */
-export default function GabyParticleFace({ state, emotion, size }: Props) {
+export default function GabyParticleFace({ state, emotion, size, talkPulse = 0 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pointsRef = useRef<Point[]>();
-  const edgesRef = useRef<Edge[]>();
-  const rafRef = useRef<number>();
-  const startRef = useRef(Date.now());
   const stateRef = useRef(state);
   const emotionRef = useRef(emotion);
+  const talkPulseRef = useRef(talkPulse);
   stateRef.current = state;
   emotionRef.current = emotion;
+  talkPulseRef.current = talkPulse;
 
-  if (!pointsRef.current) {
-    pointsRef.current = generatePoints();
-    edgesRef.current = generateEdges(pointsRef.current);
+  const pointsSpecRef = useRef<PointSpec[]>();
+  const edgesRef = useRef<Edge[]>();
+  if (!pointsSpecRef.current) {
+    pointsSpecRef.current = buildPoints();
+    edgesRef.current = buildEdges(pointsSpecRef.current);
   }
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    const scale = (size / BASE) * dpr;
-
-    const points = pointsRef.current!;
+    const specs = pointsSpecRef.current!;
     const edges = edgesRef.current!;
+    const mouthIndices = specs.map((p, i) => (p.isMouth ? i : -1)).filter((i) => i >= 0);
 
-    const draw = () => {
-      const t = (Date.now() - startRef.current) / 1000;
+    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 20);
+    camera.position.set(0, 0, 1.9);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, premultipliedAlpha: false });
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(size, size, false);
+    renderer.setClearColor(0x000000, 0);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // Puntos.
+    const positions = new Float32Array(specs.length * 3);
+    const colors = new Float32Array(specs.length * 3);
+    const sizes = new Float32Array(specs.length);
+    const baseColor = new THREE.Color(EMOTION_META[emotion].colors[0]);
+    const eyeColor = new THREE.Color('#EAFBFF');
+    specs.forEach((p, i) => {
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
+      const c = p.isEye ? eyeColor : baseColor;
+      colors[i * 3] = c.r * p.brightness;
+      colors[i * 3 + 1] = c.g * p.brightness;
+      colors[i * 3 + 2] = c.b * p.brightness;
+      sizes[i] = p.size;
+    });
+
+    const pointsGeometry = new THREE.BufferGeometry();
+    pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    pointsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const pointsMaterial = new THREE.PointsMaterial({
+      size: 0.022,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.95,
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const pointCloud = new THREE.Points(pointsGeometry, pointsMaterial);
+    group.add(pointCloud);
+
+    // Líneas entre puntos cercanos.
+    const linePositions = new Float32Array(edges.length * 2 * 3);
+    edges.forEach((e, i) => {
+      linePositions[i * 6] = specs[e.a].x;
+      linePositions[i * 6 + 1] = specs[e.a].y;
+      linePositions[i * 6 + 2] = specs[e.a].z;
+      linePositions[i * 6 + 3] = specs[e.b].x;
+      linePositions[i * 6 + 4] = specs[e.b].y;
+      linePositions[i * 6 + 5] = specs[e.b].z;
+    });
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: baseColor,
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+    group.add(lines);
+
+    // Resplandor (bloom) real — sin esto, los puntos brillantes no "sangran" luz
+    // hacia afuera como en la referencia.
+    const composer = new EffectComposer(renderer);
+    composer.setPixelRatio(dpr);
+    composer.setSize(size, size);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(size * dpr, size * dpr), 1.1, 0.55, 0.1);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
+
+    const clock = new THREE.Clock();
+    let rafId: number;
+    let lastSeenPulse = talkPulseRef.current;
+    let lastPulseTime = -10;
+
+    const animate = () => {
+      const delta = clock.getDelta();
+      const t = clock.getElapsedTime();
       const meta = EMOTION_META[emotionRef.current];
-      const [colorA, colorB] = meta.colors;
-      const pulse = 0.55 + 0.45 * Math.sin((t * 2 * Math.PI) / (meta.speed / 1000));
+      const pulse = 0.5 + 0.5 * Math.sin((t * 2 * Math.PI) / (meta.speed / 1000));
+
+      if (talkPulseRef.current !== lastSeenPulse) {
+        lastSeenPulse = talkPulseRef.current;
+        lastPulseTime = t;
+      }
+
+      // Giro ambiental suave (efecto "vivo"), como si mirara alrededor.
+      group.rotation.y = Math.sin(t * 0.35) * 0.32;
+      group.rotation.x = Math.sin(t * 0.5) * 0.06;
+      group.scale.setScalar(0.97 + pulse * 0.04);
+
+      // Boca: reacciona a los límites de palabra reales si llegan, si no cae a una
+      // onda genérica mientras habla.
       const speaking = stateRef.current === 'speaking';
-      const thinking = stateRef.current === 'thinking';
-      const mouthCurve = emotionRef.current === 'feliz' ? -3 : emotionRef.current === 'tristeza' ? 3 : 0;
-      const jitterScale = thinking ? 1.8 : 1;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.scale(scale, scale);
-
-      const pos = (p: Point): { x: number; y: number } => {
-        let x = p.baseX + Math.sin(t * p.freq + p.phase) * p.amp * jitterScale;
-        let y = p.baseY + Math.cos(t * p.freq * 0.8 + p.phase) * p.amp * jitterScale;
-        if (p.isMouth) {
-          y += mouthCurve;
-          if (speaking) y += Math.sin(t * 14 + p.phase) * 3.5;
-        }
-        return { x, y };
-      };
-
-      // Líneas primero, para que los puntos queden encima.
-      ctx.lineWidth = 0.5;
-      for (const e of edges) {
-        const pa = pos(points[e.a]);
-        const pb = pos(points[e.b]);
-        const dx = pa.x - pb.x;
-        const dy = pa.y - pb.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const opacity = Math.max(0, 1 - dist / 26) * 0.35 * pulse;
-        if (opacity <= 0.01) continue;
-        ctx.strokeStyle = colorA;
-        ctx.globalAlpha = opacity;
-        ctx.beginPath();
-        ctx.moveTo(pa.x, pa.y);
-        ctx.lineTo(pb.x, pb.y);
-        ctx.stroke();
+      const sinceBoundary = t - lastPulseTime;
+      const mouthOpen = !speaking
+        ? 0
+        : sinceBoundary < 0.6
+        ? Math.max(0, 1 - sinceBoundary / 0.32)
+        : Math.max(0, Math.sin(t * 12));
+      const colorAttr = pointsGeometry.getAttribute('color') as THREE.BufferAttribute;
+      const posAttr = pointsGeometry.getAttribute('position') as THREE.BufferAttribute;
+      for (const idx of mouthIndices) {
+        const base = specs[idx];
+        posAttr.setY(idx, base.y - mouthOpen * 0.05);
+        const boost = 1 + mouthOpen * 0.8;
+        colorAttr.setXYZ(idx, baseColor.r * base.brightness * boost, baseColor.g * base.brightness * boost, baseColor.b * base.brightness * boost);
       }
+      posAttr.needsUpdate = true;
+      colorAttr.needsUpdate = true;
 
-      // Puntos, con resplandor vía shadowBlur (fake bloom, barato en canvas 2D).
-      ctx.globalAlpha = 1;
-      for (const p of points) {
-        const { x, y } = pos(p);
-        const glowBoost = p.isEye ? 1 : pulse;
-        ctx.shadowBlur = (p.isEye ? 10 : 5) * glowBoost;
-        ctx.shadowColor = p.isEye ? colorB : colorA;
-        ctx.fillStyle = p.isEye ? '#EAFBFF' : colorA;
-        ctx.globalAlpha = Math.min(1, p.glow * (0.7 + 0.3 * pulse));
-        ctx.beginPath();
-        ctx.arc(x, y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      lineMaterial.color.set(EMOTION_META[emotionRef.current].colors[0]);
 
-      ctx.restore();
-      rafRef.current = requestAnimationFrame(draw);
+      composer.render();
+      rafId = requestAnimationFrame(animate);
     };
+    rafId = requestAnimationFrame(animate);
 
-    rafRef.current = requestAnimationFrame(draw);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(rafId);
+      pointsGeometry.dispose();
+      pointsMaterial.dispose();
+      lineGeometry.dispose();
+      lineMaterial.dispose();
+      composer.dispose();
+      renderer.dispose();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size]);
 
   return (
-    // 'canvas' va directo al DOM vía ReactDOM (no pasa por el flattening de estilos
-    // de React Native Web) — por eso el style es un objeto plano, no un array como en RN.
+    // 'canvas' va directo al DOM vía ReactDOM — el style debe ser un objeto plano.
     <canvas ref={canvasRef} style={{ width: size, height: size, display: 'block' }} />
   );
 }

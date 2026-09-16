@@ -293,7 +293,7 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
           VRM_MODEL_URL ? (
             <GabyVrmFace state={state} emotion={emotion} size={size} modelUrl={VRM_MODEL_URL} talkPulse={talkPulse} />
           ) : (
-            <GabyParticleFace state={state} emotion={emotion} size={size} />
+            <GabyParticleFace state={state} emotion={emotion} size={size} talkPulse={talkPulse} />
           )
         ) : (
         <Svg width={size} height={size} viewBox="0 0 200 250">
