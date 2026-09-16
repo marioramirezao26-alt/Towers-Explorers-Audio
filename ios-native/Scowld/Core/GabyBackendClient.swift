@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Habla directo con el backend de Gaby (Firebase Cloud Functions) — la misma
 /// función `deviceCommand` que ya usa el Stack-chan (ver stackchan-firmware/ en
@@ -56,6 +57,28 @@ struct GabyBackendClient {
             throw ClientError.badResponse(statusCode: httpResponse.statusCode, body: body)
         }
         return try JSONDecoder().decode(ResponseBody.self, from: data).reply
+    }
+}
+
+/// Gaby entra a la app como un proveedor más (los de `AI/`), así que toda la UI
+/// —chat, voz, avatar— la usa sin cambios. La diferencia es que no lleva clave de
+/// API en el dispositivo: el backend decide qué modelo usar y qué herramientas
+/// correr (agendar, anotar), igual que en la web y en el Stack-chan.
+extension GabyBackendClient: LLMProvider {
+    func generate(messages: [ChatMessage], systemPrompt _: String) async throws -> String {
+        // El prompt de sistema (la personalidad de Gaby) vive del lado del
+        // servidor, así que solo se manda el último turno del usuario: el
+        // historial también lo lleva el backend, por workspace.
+        guard let lastUserMessage = messages.last(where: { $0.role == .user })?.content else {
+            throw ClientError.invalidResponse
+        }
+        return try await sendCommand(lastUserMessage)
+    }
+
+    func generateWithVision(messages: [ChatMessage], systemPrompt: String, image _: UIImage) async throws -> String {
+        // `deviceCommand` todavía no recibe imágenes — se responde solo con el
+        // texto en vez de fallar, que es lo que le sirve al usuario.
+        try await generate(messages: messages, systemPrompt: systemPrompt)
     }
 }
 

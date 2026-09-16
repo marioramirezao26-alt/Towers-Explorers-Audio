@@ -2267,6 +2267,14 @@ struct AmicaFullView: UIViewRepresentable {
         }
 
         private func buildCurrentProvider() throws -> RuntimeLLMProvider {
+            // Gaby manda cuando está configurada (Secrets.swift): su backend ya
+            // tiene la personalidad, el historial por workspace y las
+            // herramientas de agendar/anotar. Los proveedores BYOK de Scowld
+            // quedan como respaldo para cuando todavía no se llenó Secrets.swift.
+            if let gaby = GabyBackendClient.configured {
+                return RuntimeLLMProvider(provider: gaby, supportsVision: false)
+            }
+
             HostedServiceConfig.applyBYOKDefaults()
             let defaults = UserDefaults.standard
             let providerID = defaults.string(forKey: "selectedProvider") ?? AIProvider.gemini.rawValue
