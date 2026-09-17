@@ -15,11 +15,17 @@ final class SpeechManager: NSObject {
     var error: String?
 
     // MARK: - TTS Settings
-    var speechRate: Float = 0.5
+    /// Un poco por encima de AVSpeechUtteranceDefaultSpeechRate (0.5): al ritmo
+    /// por defecto Gaby sonaba lenta y pausada, no conversacional.
+    var speechRate: Float = 0.54
     var speechPitch: Float = 1.1
 
     // MARK: - Private
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    /// Gaby habla y escucha en español. Estaba en "en-US", heredado de Scowld:
+    /// no solo respondía en inglés, tampoco entendía a quien le hablara español.
+    private static let idiomaPreferido = "es-MX"
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: idiomaPreferido))
+        ?? SFSpeechRecognizer(locale: Locale(identifier: "es-ES"))
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
@@ -126,6 +132,32 @@ final class SpeechManager: NSObject {
 
     // MARK: - Text-to-Speech
 
+    /// La voz más natural que tenga instalada el teléfono para español. iOS trae
+    /// varias calidades: las "premium" y "enhanced" suenan mucho más fluidas que
+    /// la básica, pero el usuario las descarga aparte, así que hay que elegir la
+    /// mejor disponible en vez de asumir una.
+    private static func mejorVozEspanol() -> AVSpeechSynthesisVoice? {
+        let candidatas = AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.hasPrefix("es") }
+
+        func calidad(_ voz: AVSpeechSynthesisVoice) -> Int {
+            switch voz.quality {
+            case .premium: 3
+            case .enhanced: 2
+            default: 1
+            }
+        }
+
+        // A igual calidad se prefiere el español de México, el de la app.
+        let mejor = candidatas.max { a, b in
+            let ca = calidad(a), cb = calidad(b)
+            if ca != cb { return ca < cb }
+            return (a.language == idiomaPreferido ? 1 : 0) < (b.language == idiomaPreferido ? 1 : 0)
+        }
+
+        return mejor ?? AVSpeechSynthesisVoice(language: idiomaPreferido)
+    }
+
     func speak(_ text: String) {
         // Stop any ongoing speech
         if synthesizer.isSpeaking {
@@ -135,8 +167,10 @@ final class SpeechManager: NSObject {
         let utterance = AVSpeechUtterance(string: text)
         utterance.rate = speechRate
         utterance.pitchMultiplier = speechPitch
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.preUtteranceDelay = 0.1
+        utterance.voice = Self.mejorVozEspanol()
+        // Sin pausa antes de arrancar: ese retraso hacía que cada respuesta se
+        // sintiera lenta, aunque el habla en sí fuera normal.
+        utterance.preUtteranceDelay = 0
 
         do {
             let audioSession = AVAudioSession.sharedInstance()

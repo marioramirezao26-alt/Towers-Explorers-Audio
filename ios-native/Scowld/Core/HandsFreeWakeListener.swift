@@ -10,7 +10,9 @@ final class HandsFreeWakeListener: NSObject {
     var isRunning = false
     var heardText = ""
 
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    // Gaby escucha en español; estaba en "en-US", heredado de Scowld.
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "es-MX"))
+        ?? SFSpeechRecognizer(locale: Locale(identifier: "es-ES"))
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?

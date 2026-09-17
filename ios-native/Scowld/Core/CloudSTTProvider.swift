@@ -260,7 +260,7 @@ enum CloudSTTManager {
             "config": [
                 "encoding": "LINEAR16",
                 "sampleRateHertz": 16000,
-                "languageCode": "en-US",
+                "languageCode": "es-MX",
                 "model": model,
             ],
             "audio": [

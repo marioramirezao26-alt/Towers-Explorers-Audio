@@ -46,7 +46,9 @@ final class VoiceManager: NSObject {
     }
 
     // MARK: - Private
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    // Gaby escucha en español; estaba en "en-US", heredado de Scowld.
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "es-MX"))
+        ?? SFSpeechRecognizer(locale: Locale(identifier: "es-ES"))
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()

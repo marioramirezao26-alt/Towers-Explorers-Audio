@@ -84,8 +84,9 @@ export function useSpeak() {
       utterance.lang = lang;
       const voice = pickBestVoice(voicesRef.current, lang);
       if (voice) utterance.voice = voice;
-      // Un poco más lento y con algo más de variación de tono: suena menos plano/robótico.
-      utterance.rate = 0.97;
+      // Algo por encima del ritmo normal: a 0.97 Gaby sonaba pausada, más de
+      // dictado que de conversación. El tono un poco alto la mantiene menos plana.
+      utterance.rate = 1.12;
       utterance.pitch = 1.04;
       utterance.onstart = () => opts?.onStart?.();
       utterance.onboundary = (event) => {
