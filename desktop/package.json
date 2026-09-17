@@ -17,13 +17,24 @@
   "build": {
     "appId": "com.gaby.escritorio",
     "productName": "Gaby",
-    "files": ["main.js", "preload.js", "orbe/**/*", "icono.png"],
+    "files": [
+      "main.js",
+      "preload.js",
+      "orbe/**/*",
+      "icono.png"
+    ],
     "win": {
-      "target": "portable",
+      "target": [
+        "zip",
+        "portable"
+      ],
       "icon": "icono.png"
     },
     "portable": {
-      "artifactName": "Gaby.exe"
+      "artifactName": "Gaby-portable.exe"
+    },
+    "zip": {
+      "artifactName": "Gaby-carpeta.zip"
     }
   }
 }

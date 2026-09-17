@@ -37,5 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Gaby-windows
-          path: desktop/dist/Gaby.exe
+          path: |
+            desktop/dist/Gaby-carpeta.zip
+            desktop/dist/Gaby-portable.exe
           retention-days: 90
