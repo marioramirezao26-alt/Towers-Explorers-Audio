@@ -29,7 +29,15 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      - name: Preparar el SDK de Android
+        # El runner ya trae el SDK instalado, así que no hace falta una acción
+        # que lo instale (la que se probaba fallaba pidiendo un paquete
+        # "tools" que Google ya retiró). Solo falta el NDK exacto que pide
+        # React Native 0.74 para compilar las partes en C++.
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.1.10909125" > /dev/null
 
       - name: Instalar dependencias
         run: npm ci --legacy-peer-deps
