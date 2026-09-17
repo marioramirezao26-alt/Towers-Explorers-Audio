@@ -18,21 +18,68 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+/**
+ * Si algo falla al inicializar Firebase, se guarda aquí en vez de lanzarse.
+ *
+ * Este archivo se ejecuta al importarse, antes de que React dibuje nada: una
+ * excepción aquí cierra la app al instante y Android solo dice "Gaby se
+ * detuvo", sin pista de la causa. Guardando el error, la app puede arrancar
+ * igual y mostrarlo en pantalla (ver ErrorBoundary y App.tsx).
+ */
+export let firebaseInitError: Error | null = null;
 
-let auth: Auth;
+let app: ReturnType<typeof initializeApp> | undefined;
+let auth: Auth | undefined;
+let db: ReturnType<typeof getFirestore> | undefined;
+let storage: ReturnType<typeof getStorage> | undefined;
+let functions: ReturnType<typeof getFunctions> | undefined;
+
 try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-} catch {
-  // initializeAuth throws if called twice (e.g. Fast Refresh) — fall back to the existing instance.
-  const { getAuth } = require('firebase/auth');
-  auth = getAuth(app);
+  const faltantes = Object.entries(firebaseConfig)
+    .filter(([, valor]) => !valor)
+    .map(([clave]) => clave);
+  if (faltantes.length) {
+    // Un mensaje concreto: con la configuración vacía, Firebase lanza
+    // "auth/invalid-api-key", que no dice que lo que falta son las variables.
+    throw new Error(
+      `Falta la configuración de Firebase (${faltantes.join(', ')}). ` +
+        'Se define al compilar, con las variables EXPO_PUBLIC_FIREBASE_*.',
+    );
+  }
+
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+  try {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    // initializeAuth throws if called twice (e.g. Fast Refresh) — fall back to the existing instance.
+    const { getAuth } = require('firebase/auth');
+    auth = getAuth(app);
+  }
+
+  db = getFirestore(app);
+  storage = getStorage(app);
+  functions = getFunctions(app);
+} catch (error) {
+  firebaseInitError = error instanceof Error ? error : new Error(String(error));
 }
 
-const db = getFirestore(app);
-const storage = getStorage(app);
-const functions = getFunctions(app);
+// Se exportan como no-opcionales a propósito: cuando la inicialización falla,
+// App.tsx muestra el error y no monta nada que los toque, así que allí donde el
+// resto de la app los usa, existen. Declararlos opcionales obligaría a
+// comprobar por null en cada archivo para un caso que no llega a ocurrir.
+const appOk = app as NonNullable<typeof app>;
+const authOk = auth as NonNullable<typeof auth>;
+const dbOk = db as NonNullable<typeof db>;
+const storageOk = storage as NonNullable<typeof storage>;
+const functionsOk = functions as NonNullable<typeof functions>;
 
-export { app, auth, db, storage, functions };
+export {
+  appOk as app,
+  authOk as auth,
+  dbOk as db,
+  storageOk as storage,
+  functionsOk as functions,
+};
