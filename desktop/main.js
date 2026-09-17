@@ -1,6 +1,7 @@
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, net, protocol, screen } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
 /**
  * Gaby en el escritorio: el orbe flotando siempre encima de las demás ventanas,
@@ -14,6 +15,39 @@ const path = require('node:path');
 
 const URL_GABY = process.env.GABY_URL ?? 'https://gaby-c76cf.web.app';
 const LADO = 200;
+
+/**
+ * El orbe se sirve por un esquema propio en vez de abrir el archivo directo.
+ *
+ * Su dibujo es un módulo de JavaScript que importa Three.js, y Chromium bloquea
+ * los módulos cargados desde file:// por política de origen cruzado: el archivo
+ * abre, pero el script nunca corre y la ventana queda vacía. Un esquema propio
+ * marcado como estándar y seguro sí los permite.
+ */
+const ESQUEMA = 'gaby';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: ESQUEMA,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+  },
+]);
+
+function servirOrbe() {
+  const raiz = path.join(__dirname, 'orbe');
+
+  protocol.handle(ESQUEMA, (peticion) => {
+    const relativa = decodeURIComponent(new URL(peticion.url).pathname);
+    const destino = path.join(raiz, relativa);
+
+    // Sin esta comprobación, una ruta con '..' serviría cualquier archivo del
+    // disco a través del esquema.
+    if (destino !== raiz && !destino.startsWith(raiz + path.sep)) {
+      return new Response('No encontrado', { status: 404 });
+    }
+    return net.fetch(pathToFileURL(destino).toString());
+  });
+}
 
 let ventanaOrbe = null;
 let ventanaApp = null;
@@ -87,7 +121,7 @@ function crearOrbe() {
   ventanaOrbe.setAlwaysOnTop(true, 'screen-saver');
   ventanaOrbe.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-  ventanaOrbe.loadFile(path.join(__dirname, 'orbe', 'index.html'));
+  ventanaOrbe.loadURL(`${ESQUEMA}://orbe/index.html`);
 
   ventanaOrbe.on('moved', () => {
     const [nx, ny] = ventanaOrbe.getPosition();
@@ -151,6 +185,12 @@ function construirMenu() {
       click: alternarOrbe,
     },
     { label: 'Traerlo al centro', click: centrarOrbe },
+    {
+      // Para poder ver el motivo cuando el orbe no se dibuje, sin tener que
+      // compilar una versión aparte solo para mirar la consola.
+      label: 'Ver la consola del orbe',
+      click: () => ventanaOrbe?.webContents.openDevTools({ mode: 'detach' }),
+    },
     { type: 'separator' },
     {
       label: 'Iniciar con Windows',
@@ -190,6 +230,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    servirOrbe();
     crearOrbe();
     crearBandeja();
     ipcMain.on('abrir-gaby', abrirGaby);
