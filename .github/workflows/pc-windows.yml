@@ -1,0 +1,41 @@
+name: App de Windows
+
+# Compila Gaby como un .exe portable: el orbe flotando siempre encima del
+# escritorio, y la app completa a un clic. Se descarga desde la pestaña
+# "Actions" del repo (dentro del run, en "Artifacts") y se ejecuta sin instalar.
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "desktop/**"
+      - "ios-native/Scowld/Resources/amica.bundle/**"
+      - ".github/workflows/pc-windows.yml"
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        working-directory: desktop
+        # npm install y no npm ci: desktop/ no lleva package-lock propio, para
+        # no arrastrar un segundo candado de dependencias en el repo.
+        run: npm install
+
+      - name: Compilar el .exe
+        working-directory: desktop
+        # copiar-orbe.mjs trae el orbe desde donde vive (el visor de iOS) antes
+        # de empaquetar; ver ese archivo.
+        run: npm run empaquetar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Gaby-windows
+          path: desktop/dist/Gaby.exe
+          retention-days: 90

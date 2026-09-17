@@ -1,0 +1,29 @@
+{
+  "name": "gaby-escritorio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gaby flotando en el escritorio: el orbe siempre encima, a un clic de la app.",
+  "author": "Mario Ramírez",
+  "main": "main.js",
+  "scripts": {
+    "copiar-orbe": "node copiar-orbe.mjs",
+    "start": "npm run copiar-orbe && electron .",
+    "empaquetar": "npm run copiar-orbe && electron-builder --win portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.gaby.escritorio",
+    "productName": "Gaby",
+    "files": ["main.js", "preload.js", "orbe/**/*", "icono.png"],
+    "win": {
+      "target": "portable",
+      "icon": "icono.png"
+    },
+    "portable": {
+      "artifactName": "Gaby.exe"
+    }
+  }
+}
