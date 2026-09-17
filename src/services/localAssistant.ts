@@ -16,12 +16,31 @@ export interface LocalResult {
   reply?: string;
 }
 
-const DELETE_RE = /\b(cancela(?:me)?|elimina(?:me)?|borra(?:me)?|quita(?:me)?)\b/i;
+// Al añadirle el pronombre, el verbo se acentúa ("cancela" → "cancélame"), así
+// que cada patrón acepta las dos formas. Sin esto, justamente las frases con
+// pronombre —las más naturales al hablarle— no se reconocían.
+const DELETE_RE = /\b(canc[eé]la(?:me)?|elim[ií]na(?:me)?|b[oó]rra(?:me)?|qu[ií]ta(?:me)?)\b/i;
 const LIST_RE = /\b(qu[eé] tengo|mis citas|mu[eé]strame|revisa mi agenda|mi agenda|qu[eé] hay agendado|qu[eé] citas tengo)\b/i;
-const CREATE_RE = /\b(agend[ae](?:me)?|programa(?:me)?|reserva(?:me)?)\b/i;
-const NOTE_RE = /\b(apunta(?:me)?|anota(?:me)?|recu[eé]rdame|guarda(?:me)?)\b\s*(que\s+)?/i;
+const CREATE_RE = /\b(ag[eé]nd[ae](?:me)?|progr[aá]ma(?:me)?|res[eé]rva(?:me)?)\b/i;
+const NOTE_RE = /\b(ap[uú]nta(?:me)?|an[oó]ta(?:me)?|recu[eé]rdame|gu[aá]rda(?:me)?)\b\s*(que\s+)?/i;
 
-const FILLER_WORDS = /^(una|un|la|el)\s+(cita|reunión|reunion)\s+(con|de|para)\s+|^(con|de|para)\s+/i;
+const FILLER_WORDS = /^(una|un|la|el)\s+(cita|reunión|reunion)\s+(con|de|para|del|de la)\s+|^(con|de|para|del|de la)\s+/i;
+
+/** Restos que quedan al recortar la fecha: "Reunión con Ana el" → "Reunión con Ana". */
+const TRAILING_WORDS = /\s+(el|la|los|las|de|del|a|en|para|por)$/i;
+
+/**
+ * chrono no interpreta "de la tarde/noche" como PM: "mañana a las 3 de la
+ * tarde" lo entendía como las 3:00 AM — doce horas antes de la cita real.
+ * "de la mañana" se maneja aparte de "mañana" a secas, que significa el día
+ * siguiente y debe quedar intacto.
+ */
+function marcarAmPm(texto: string): string {
+  return texto
+    .replace(/\bde la mañana\b/gi, 'am')
+    .replace(/\bde la (tarde|noche)\b/gi, 'pm')
+    .replace(/\bdel mediod[ií]a\b/gi, 'pm');
+}
 
 function pick<T>(options: T[]): T {
   return options[Math.floor(Math.random() * options.length)];
@@ -39,6 +58,8 @@ function extractAppointmentTitle(text: string, dateSpan?: { index: number; text:
   rest = rest.replace(CREATE_RE, '').trim();
   rest = rest.replace(FILLER_WORDS, '').trim();
   rest = rest.replace(/\s{2,}/g, ' ').trim();
+  // Se repite porque suelen quedar dos seguidas ("... con Ana el de" → "... con Ana").
+  while (TRAILING_WORDS.test(rest)) rest = rest.replace(TRAILING_WORDS, '');
   return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : 'Reunión';
 }
 
@@ -88,11 +109,14 @@ async function handleList(ctx: Context): Promise<LocalResult> {
 }
 
 async function handleCreate(text: string, ctx: Context): Promise<LocalResult> {
-  const now = new Date();
-  const results = chrono.es.parse(text, now, {});
+  // El título se recorta sobre el mismo texto que se analizó: los índices que
+  // devuelve chrono son de ese texto. forwardDate hace que un día suelto ("el
+  // lunes") sea siempre el próximo, no el que ya pasó.
+  const textoFecha = marcarAmPm(text);
+  const results = chrono.es.parse(textoFecha, new Date(), { forwardDate: true });
   const first = results[0];
 
-  const title = extractAppointmentTitle(text, first ? { index: first.index, text: first.text } : undefined);
+  const title = extractAppointmentTitle(textoFecha, first ? { index: first.index, text: first.text } : undefined);
 
   if (!first) {
     return { handled: true, reply: `¿Para cuándo quieres que agende "${title}"? Dime el día y la hora en el mismo mensaje.` };
@@ -144,10 +168,13 @@ export async function tryHandleLocally(text: string, ctx: Context): Promise<Loca
   const trimmed = text.trim();
   if (!trimmed) return { handled: false };
 
+  // Los verbos explícitos van primero, y listar de último por ser el patrón más
+  // laxo: "anota que tengo que comprar leche" contiene "que tengo" y se
+  // interpretaba como "¿qué tengo?", así que listaba citas en vez de anotar.
   if (DELETE_RE.test(trimmed)) return handleDelete(trimmed, ctx);
-  if (LIST_RE.test(trimmed)) return handleList(ctx);
   if (CREATE_RE.test(trimmed)) return handleCreate(trimmed, ctx);
   if (NOTE_RE.test(trimmed)) return handleNote(trimmed, ctx);
+  if (LIST_RE.test(trimmed)) return handleList(ctx);
 
   return { handled: false };
 }

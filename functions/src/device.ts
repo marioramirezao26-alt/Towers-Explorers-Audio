@@ -2,6 +2,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { answerWithOpenAI, openaiApiKey } from './research';
+import { tryHandleCommand } from './commandRouter';
 
 const deviceSharedSecret = defineSecret('DEVICE_SHARED_SECRET');
 
@@ -12,9 +13,8 @@ const deviceSharedSecret = defineSecret('DEVICE_SHARED_SECRET');
  * (configúralo en el firmware con el mismo valor que guardaste en
  * `firebase functions:secrets:set DEVICE_SHARED_SECRET`).
  *
- * Por ahora reutiliza la misma lógica de researchWithOpenAI (sin el router local de
- * agendar/notas, que vive del lado de la app en JS) — suficiente para el primer punto
- * de contacto entre el robot físico y Gaby; se puede portar el router más adelante.
+ * Pasa primero por el router de comandos (agendar/cancelar/listar/anotar) y solo
+ * manda a OpenAI lo que ese router no reconoce.
  */
 export const deviceCommand = onRequest(
   { secrets: [deviceSharedSecret, openaiApiKey], cpu: 1, memory: '256MiB', timeoutSeconds: 60 },
@@ -41,6 +41,15 @@ export const deviceCommand = onRequest(
     const workspaceSnap = await workspaceRef.get();
     if (!workspaceSnap.exists) {
       res.status(404).json({ error: 'Espacio de trabajo no encontrado.' });
+      return;
+    }
+
+    // Primero el router de agendar/cancelar/listar/anotar: son las tareas más
+    // frecuentes, y resolverlas aquí evita una llamada a OpenAI (más rápido y
+    // más barato). Solo lo que no reconoce se manda al modelo.
+    const local = await tryHandleCommand(message, workspaceRef, 'device');
+    if (local.handled && local.reply) {
+      res.status(200).json({ reply: local.reply });
       return;
     }
 
