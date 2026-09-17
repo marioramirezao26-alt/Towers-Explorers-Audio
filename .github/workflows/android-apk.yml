@@ -1,0 +1,54 @@
+name: APK de Android
+
+# Compila Gaby como APK instalable y lo deja descargable desde la pestaña
+# "Actions" del repo (dentro del run, en "Artifacts"). Sirve para instalarlo en
+# el teléfono sin cables ni tiendas: se descarga y se abre.
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "src/**"
+      - "app.json"
+      - "package.json"
+      - ".github/workflows/android-apk.yml"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm ci --legacy-peer-deps
+
+      - name: Generar el proyecto Android
+        # android/ no se versiona: lo genera prebuild desde app.json.
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilar el APK
+        working-directory: android
+        # Se compila universal (las cuatro arquitecturas) a propósito: pesa más,
+        # pero instala en cualquier teléfono sin tener que averiguar cuál lleva.
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Renombrar para que se reconozca al descargarlo
+        run: cp android/app/build/outputs/apk/release/app-release.apk Gaby.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Gaby-apk
+          path: Gaby.apk
+          retention-days: 90
