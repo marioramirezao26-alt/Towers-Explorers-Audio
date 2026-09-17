@@ -16,6 +16,18 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    # Las credenciales viven en los secretos del repo, no en el código: este
+    # repositorio es público y dejarlas ahí permitiría que cualquiera consumiera
+    # la cuota del proyecto de Firebase.
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}
+      EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +50,17 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.1.10909125" > /dev/null
+
+      - name: Comprobar que están las credenciales
+        # Expo incrusta las variables EXPO_PUBLIC_* dentro del APK en el momento
+        # de compilar. Sin ellas la app se instala pero muere al abrir, porque
+        # Firebase arranca con la configuración vacía. Mejor fallar aquí, con un
+        # mensaje claro, que entregar un APK roto.
+        run: |
+          if [ -z "${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}" ]; then
+            echo "::error::Faltan los secretos de Firebase. Agrégalos en Settings → Secrets and variables → Actions (ver ios-native/../README). Sin ellos el APK se instala pero no abre."
+            exit 1
+          fi
 
       - name: Instalar dependencias
         run: npm ci --legacy-peer-deps
