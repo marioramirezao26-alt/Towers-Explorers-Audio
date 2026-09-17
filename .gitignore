@@ -19,3 +19,7 @@ functions/node_modules/
 functions/lib/
 firebase-debug.log
 .firebase/
+
+# Proyecto Android generado por "expo prebuild" — se regenera desde app.json,
+# no se versiona (igual que node_modules).
+/android/

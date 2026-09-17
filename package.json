@@ -5,8 +5,8 @@
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export -p web --clear",
     "deploy:web": "expo export -p web --clear && firebase deploy --only hosting",
@@ -27,6 +27,7 @@
     "expo": "~51.0.28",
     "expo-auth-session": "~5.5.2",
     "expo-av": "~14.0.7",
+    "expo-build-properties": "^57.0.20",
     "expo-file-system": "~17.0.1",
     "expo-font": "~12.0.10",
     "expo-linear-gradient": "~13.0.2",
