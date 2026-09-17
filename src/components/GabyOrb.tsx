@@ -43,13 +43,19 @@ export default function GabyOrb({ state, emotionOverride, size = 220, tiltX, til
   const deviceTiltX = tiltX ?? fallbackTilt;
   const deviceTiltY = tiltY ?? fallbackTilt;
 
+  // Las cuatro animaciones de este componente usan el driver nativo, y tienen que
+  // seguir así: `pulse` alimenta el mismo `transform` que `drift`, `tilt` y
+  // `turn`. Cuando una sola de ellas es nativa, React Native se lleva el nodo
+  // entero a nativo, y animar otra desde JavaScript lanza "Attempting to run JS
+  // driven animation on animated node that has been moved to native" y cierra la
+  // app. Todo lo que anima aquí (opacity y transform) admite el driver nativo.
   useEffect(() => {
     pulse.setValue(0);
     const speed = EMOTION_META[emotion].speed;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: speed, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: speed, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: speed, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: speed, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     );
     loop.start();
