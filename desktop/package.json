@@ -8,7 +8,7 @@
   "scripts": {
     "copiar-orbe": "node copiar-orbe.mjs",
     "start": "npm run copiar-orbe && electron .",
-    "empaquetar": "npm run copiar-orbe && electron-builder --win portable --publish never"
+    "empaquetar": "npm run copiar-orbe && electron-builder --win --publish never"
   },
   "devDependencies": {
     "electron": "^32.2.0",
@@ -28,13 +28,11 @@
         "zip",
         "portable"
       ],
-      "icon": "icono.png"
+      "icon": "icono.png",
+      "artifactName": "Gaby-carpeta.${ext}"
     },
     "portable": {
       "artifactName": "Gaby-portable.exe"
-    },
-    "zip": {
-      "artifactName": "Gaby-carpeta.zip"
     }
   }
 }
