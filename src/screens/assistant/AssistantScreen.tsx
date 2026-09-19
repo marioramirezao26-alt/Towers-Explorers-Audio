@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { sendAssistantMessage, subscribeToAssistantMessages } from '@/services/assistant';
 import { useWakeWord } from '@/hooks/useWakeWord';
+import { useClapWake } from '@/hooks/useClapWake';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useDeviceTilt } from '@/hooks/useDeviceTilt';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -80,6 +81,15 @@ export default function AssistantScreen() {
   };
 
   const wakeWord = useWakeWord({ onCommand: (command) => handleSendText(command) });
+
+  // Dos palmas encienden la escucha sin tocar nada. El detector solo corre
+  // mientras Gaby NO está escuchando: así no compiten dos usos del micrófono, y
+  // al terminar la conversación vuelve a quedar a la espera del aplauso.
+  const [clapEnabled, setClapEnabled] = useState(false);
+  const clap = useClapWake({
+    activo: clapEnabled && !wakeWord.enabled,
+    onClap: () => wakeWord.start(),
+  });
   // La pantalla no se apaga mientras Gaby está escuchando, para que "Hey Gaby" siga funcionando.
   useWakeLock(wakeWord.enabled);
   const pushToTalk = usePushToTalk();
@@ -184,6 +194,15 @@ export default function AssistantScreen() {
               {TITLE_LABEL[orbState] ?? TITLE_LABEL.idle}
             </Text>
           </View>
+          {clap.supported && (
+            <IconButton
+              icon="hand-clap"
+              mode="contained"
+              containerColor="rgba(255,255,255,0.06)"
+              iconColor={clapEnabled ? colors.accent : colors.textMuted}
+              onPress={() => setClapEnabled((v) => !v)}
+            />
+          )}
           <IconButton
             icon={voiceReplies ? 'volume-high' : 'volume-off'}
             mode="contained"
@@ -231,6 +250,10 @@ export default function AssistantScreen() {
             ? 'Suelta cuando termines de hablar…'
             : showPushToTalk
             ? 'Mantén presionado el micrófono para hablarle'
+            : clap.status === 'listening' && !wakeWord.enabled
+            ? 'Aplaude dos veces para hablarme'
+            : clap.status === 'error' && clapEnabled
+            ? 'No se pudo usar el micrófono para oír los aplausos'
             : STATUS_LABEL[wakeWord.status] ?? STATUS_LABEL.idle}
         </Text>
 
