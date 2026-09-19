@@ -1,8 +1,9 @@
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, net, protocol, screen } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, net, protocol, screen } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { ACCIONES } = require('./acciones');
+const { ejecutarTarea } = require('./claude');
 
 /**
  * Gaby en el escritorio: el orbe flotando siempre encima de las demás ventanas,
@@ -201,6 +202,17 @@ async function manejarAccion(evento, carga) {
     }
 
     const { accion, args } = carga ?? {};
+
+    // Dictarle a Claude Code no vive en el catálogo porque necesita algo que
+    // solo conoce este proceso: la carpeta del proyecto que se eligió desde la
+    // bandeja. Deducirla de lo que se dijo sería justo lo que no se quiere.
+    if (accion === 'claudeCode') {
+      const tarea = String(args?.tarea ?? '').trim();
+      if (!tarea) return { ok: false, error: 'No entendí qué tarea pasarle.' };
+      const resultado = await ejecutarTarea(tarea, leerEstado().carpetaProyecto, ventanaApp);
+      return { ok: true, resultado };
+    }
+
     // Object.hasOwn y no un acceso directo: 'constructor' o '__proto__' son
     // propiedades de cualquier objeto y no son acciones.
     if (typeof accion !== 'string' || !Object.hasOwn(ACCIONES, accion)) {
@@ -225,6 +237,13 @@ function construirMenu() {
       click: alternarOrbe,
     },
     { label: 'Traerlo al centro', click: centrarOrbe },
+    { type: 'separator' },
+    {
+      label: carpetaProyecto()
+        ? `Proyecto: ${path.basename(carpetaProyecto())}`
+        : 'Elegir la carpeta del proyecto…',
+      click: elegirProyecto,
+    },
     {
       // Para poder ver el motivo cuando el orbe no se dibuje, sin tener que
       // compilar una versión aparte solo para mirar la consola.
@@ -241,6 +260,23 @@ function construirMenu() {
     { type: 'separator' },
     { label: 'Salir', click: () => app.quit() },
   ]);
+}
+
+/** La carpeta donde trabaja Claude Code. Se elige a mano y queda recordada. */
+function carpetaProyecto() {
+  return leerEstado().carpetaProyecto ?? '';
+}
+
+async function elegirProyecto() {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Carpeta del proyecto para Claude Code',
+    properties: ['openDirectory'],
+    defaultPath: carpetaProyecto() || undefined,
+  });
+  if (canceled || !filePaths[0]) return;
+  guardarEstado({ carpetaProyecto: filePaths[0] });
+  // El menú lleva el nombre de la carpeta, así que hay que rehacerlo.
+  bandeja?.setContextMenu(construirMenu());
 }
 
 function crearBandeja() {

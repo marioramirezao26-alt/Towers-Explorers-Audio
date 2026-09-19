@@ -79,8 +79,11 @@ export default function AssistantScreen() {
     const orden = puente ? interpretarComandoPC(text) : null;
     if (orden && puente) {
       const resultado = await puente.ejecutar(orden.accion, orden.args);
+      // Algunas acciones tienen algo que contar (lo que respondió Claude Code);
+      // las demás se dan por hechas con la frase fija de la orden.
+      const contado = (resultado.resultado as { hablado?: string } | null)?.hablado;
       const respuesta = resultado.ok
-        ? orden.respuesta
+        ? contado ?? orden.respuesta
         : `No pude hacerlo: ${resultado.error ?? 'algo falló'}`;
       setError(resultado.ok ? null : respuesta);
       decir(respuesta);

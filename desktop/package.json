@@ -22,6 +22,7 @@
       "preload.js",
       "preload-app.js",
       "acciones.js",
+      "claude.js",
       "orbe/**/*",
       "icono.png"
     ],

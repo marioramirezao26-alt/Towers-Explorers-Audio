@@ -73,6 +73,26 @@ function pasosDeVolumen(t: string): number {
 export function interpretarComandoPC(texto: string): ComandoPC | null {
   const t = normalizar(texto);
 
+  // --- Dictarle a Claude Code ---
+  // Va lo primero: la tarea es texto libre y puede contener cualquiera de las
+  // palabras de abajo ("Claude, sube el volumen del reproductor" es una tarea de
+  // programación, no una orden de volumen).
+  //
+  // Se busca sobre el texto original y no sobre el normalizado porque la tarea
+  // se le pasa tal cual a Claude Code: con sus tildes y su puntuación, no
+  // aplanada. Se aceptan "cloud" y "clod" porque es lo que suele entender la
+  // transcripción cuando uno dice "Claude" en español.
+  const claude =
+    /^\s*(?:oye\s+|hey\s+)?(?:claude|cloud|clod)\s*[,:]?\s+(.+)$/i.exec(texto) ??
+    /\b(?:dile|d[ií]le|p[ií]dele)\s+a\s+(?:claude|cloud|clod)\s+que\s+(.+)$/i.exec(texto);
+  if (claude && claude[1].trim().length > 3) {
+    return {
+      accion: 'claudeCode',
+      args: { tarea: claude[1].trim() },
+      respuesta: 'Se lo paso a Claude Code.',
+    };
+  }
+
   // --- Volumen ---
   if (/\b(silencia|silenciar|mutea|quita el sonido|sin sonido)\b/.test(t)) {
     return { accion: 'silenciar', args: {}, respuesta: 'Listo, silenciado.' };
