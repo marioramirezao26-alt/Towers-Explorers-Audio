@@ -20,6 +20,16 @@ interface UseHandsFreeOptions {
   pausado?: boolean;
   /** Aplausos seguidos que hacen falta. Uno solo lo dispara cualquier cosa. */
   aplausos?: number;
+  /**
+   * Contador que, al subir, arranca la grabación desde fuera.
+   *
+   * En el programa de escritorio quien oye el aplauso es el orbe, para que
+   * funcione sin ninguna ventana abierta; esta página solo graba y transcribe.
+   * Ahí llega el aviso por aquí en vez de detectarlo por su cuenta.
+   */
+  disparoExterno?: number;
+  /** False cuando alguien de fuera ya está oyendo por nosotros. */
+  detectarAplauso?: boolean;
 }
 
 /**
@@ -70,7 +80,17 @@ async function aBase64(blob: Blob): Promise<string> {
   });
 }
 
-export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }: UseHandsFreeOptions) {
+/** Cada cuánto se mira el micrófono. Un aplauso dura decenas de milisegundos. */
+const PASO_MS = 25;
+
+export function useHandsFree({
+  activo,
+  onTexto,
+  pausado = false,
+  aplausos = 2,
+  disparoExterno = 0,
+  detectarAplauso = true,
+}: UseHandsFreeOptions) {
   const [status, setStatus] = useState<HandsFreeStatus>('apagado');
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +98,10 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
   onTextoRef.current = onTexto;
   const pausadoRef = useRef(pausado);
   pausadoRef.current = pausado;
+  const detectarRef = useRef(detectarAplauso);
+  detectarRef.current = detectarAplauso;
+  /** Lo rellena el efecto; lo llama el disparo externo. */
+  const grabarRef = useRef<(() => void) | null>(null);
 
   const supported =
     Platform.OS === 'web' &&
@@ -99,7 +123,11 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
     }
 
     let vivo = true;
-    let cuadro = 0;
+    // Un temporizador y no requestAnimationFrame: dentro del programa de
+    // escritorio esta página corre en una ventana escondida, y ahí el navegador
+    // no produce cuadros, así que un bucle de animación no llegaría a
+    // ejecutarse nunca. Con un intervalo funciona igual en los dos sitios.
+    let reloj: ReturnType<typeof setInterval> | null = null;
     let contexto: AudioContext | null = null;
     let captura: MediaStream | null = null;
     let grabadora: MediaRecorder | null = null;
@@ -191,9 +219,13 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
           if (vivo) setStatus('grabando');
         };
 
+        // Lo usa el disparo externo (el aplauso que oyó el orbe).
+        grabarRef.current = () => {
+          if (vivo && fase === 'esperando' && !pausadoRef.current) grabar();
+        };
+
         const mirar = () => {
           if (!vivo) return;
-          cuadro = requestAnimationFrame(mirar);
           if (fase === 'transcribiendo') return;
 
           analizador.getFloatTimeDomainData(ondas);
@@ -225,6 +257,9 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
             ruido = ruido * 0.97 + rms * 0.03;
             return;
           }
+          // Se sigue aprendiendo el ruido aunque otro esté oyendo por nosotros;
+          // lo que se salta es contar el golpe como llamada.
+          if (!detectarRef.current) return;
           if (ahora - ultimoAplauso < REFRACTARIO_MS) return;
 
           analizador.getByteFrequencyData(espectro);
@@ -248,7 +283,7 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
         };
 
         setStatus('esperando');
-        cuadro = requestAnimationFrame(mirar);
+        reloj = setInterval(mirar, PASO_MS);
       } catch {
         // Permiso denegado o sin micrófono. No se reintenta: sin permiso,
         // insistir solo repite el diálogo del navegador.
@@ -263,12 +298,19 @@ export function useHandsFree({ activo, onTexto, pausado = false, aplausos = 2 }:
 
     return () => {
       vivo = false;
-      cancelAnimationFrame(cuadro);
+      grabarRef.current = null;
+      if (reloj) clearInterval(reloj);
       if (grabadora?.state === 'recording') grabadora.stop();
       captura?.getTracks().forEach((t) => t.stop());
       contexto?.close();
     };
   }, [activo, aplausos, supported]);
+
+  // El aplauso que oyó otro (el orbe del escritorio). Se ignora el 0 inicial:
+  // es el valor de arranque, no una llamada.
+  useEffect(() => {
+    if (disparoExterno > 0) grabarRef.current?.();
+  }, [disparoExterno]);
 
   return { supported, status, error };
 }

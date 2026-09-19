@@ -135,21 +135,28 @@ function crearOrbe() {
   });
 }
 
-function abrirGaby() {
-  if (ventanaApp && !ventanaApp.isDestroyed()) {
-    if (ventanaApp.isMinimized()) ventanaApp.restore();
-    ventanaApp.focus();
-    return;
-  }
-
+/**
+ * La ventana de la app, que puede existir sin verse.
+ *
+ * Quien oye el aplauso es el orbe, pero grabar y transcribir sigue siendo cosa
+ * de esta ventana: es la que tiene la sesión iniciada contra Firebase. Así que
+ * al aplaudir se crea escondida si no existía, hace el trabajo y no aparece
+ * nunca — hablarle a Gaby no debería abrir una ventana.
+ */
+function crearApp({ visible }) {
   ventanaApp = new BrowserWindow({
     width: 1100,
     height: 820,
     minWidth: 380,
+    show: visible,
     backgroundColor: '#03060f',
     title: 'Gaby',
     icon: path.join(__dirname, 'icono.png'),
     webPreferences: {
+      // Sin esto, Chromium ralentiza los temporizadores de una ventana que no
+      // se ve, y la detección de silencio dejaría de funcionar justo cuando la
+      // ventana está escondida, que es el caso normal aquí.
+      backgroundThrottling: false,
       // Le da a la app el puente para manejar el computador. Va aislado y sin
       // Node en la página: lo único que cruza es pedir una acción del catálogo.
       preload: path.join(__dirname, 'preload-app.js'),
@@ -162,6 +169,23 @@ function abrirGaby() {
   ventanaApp.on('closed', () => {
     ventanaApp = null;
   });
+}
+
+/** Trae la app al frente, creándola si hace falta. */
+function abrirGaby() {
+  if (!ventanaApp || ventanaApp.isDestroyed()) {
+    crearApp({ visible: true });
+    return;
+  }
+  if (ventanaApp.isMinimized()) ventanaApp.restore();
+  ventanaApp.show();
+  ventanaApp.focus();
+}
+
+/** Se asegura de que exista, sin sacarla a la vista si estaba escondida. */
+function asegurarApp() {
+  if (!ventanaApp || ventanaApp.isDestroyed()) crearApp({ visible: false });
+  return ventanaApp;
 }
 
 function alternarOrbe() {
@@ -312,6 +336,26 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.on('abrir-gaby', abrirGaby);
     ipcMain.on('ocultar-orbe', () => ventanaOrbe?.hide());
     ipcMain.handle('gaby-pc', manejarAccion);
+
+    // El orbe oyó el aplauso; la app es quien graba y transcribe. Si todavía no
+    // existe se crea escondida: hablarle a Gaby no debería abrir una ventana.
+    ipcMain.on('orbe-aplauso', () => {
+      const app = asegurarApp();
+      // Recién creada, la página aún no está lista para recibir el aviso.
+      if (app.webContents.isLoading()) {
+        app.webContents.once('did-finish-load', () => app.webContents.send('aplauso'));
+      } else {
+        app.webContents.send('aplauso');
+      }
+    });
+
+    // La app cuenta en qué va, y el orbe lo muestra y deja de contar aplausos
+    // mientras tanto: durante la conversación, lo que entra por el micrófono es
+    // la conversación misma.
+    ipcMain.on('gaby-estado', (_evento, estado) => {
+      ventanaOrbe?.webContents.send('estado-gaby', estado ?? { fase: 'libre' });
+    });
+    ipcMain.on('gaby-pulso', () => ventanaOrbe?.webContents.send('pulso-habla'));
   });
 
   // A propósito no se cierra la app al cerrar las ventanas: Gaby vive en la

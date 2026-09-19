@@ -60,7 +60,11 @@ export default function AssistantScreen() {
     wakeWord.pause();
     speak(texto, {
       onStart: () => setIsSpeaking(true),
-      onBoundary: () => setTalkPulse((v) => v + 1),
+      onBoundary: () => {
+        setTalkPulse((v) => v + 1);
+        // El orbe del escritorio late con cada palabra igual que el de aquí.
+        window.gabyPC?.pulsoAlHablar();
+      },
       onEnd: () => {
         setIsSpeaking(false);
         wakeWord.resume();
@@ -111,12 +115,26 @@ export default function AssistantScreen() {
   // cuándo callaste y lo manda a transcribir. No usa el reconocimiento del
   // navegador porque dentro de la app de escritorio no funciona; va por la nube,
   // que sirve igual en el .exe, en Chrome y en el teléfono.
-  const [manosLibres, setManosLibres] = useState(false);
+  // En el programa de escritorio quien oye el aplauso es el orbe, para que
+  // funcione sin ninguna ventana abierta. Esta pantalla corre ahí escondida y
+  // solo graba y transcribe, así que el manos libres arranca solo y no hace
+  // falta detectar nada por nuestra cuenta.
+  const enEscritorio = typeof window !== 'undefined' && !!window.gabyPC;
+  const [manosLibres, setManosLibres] = useState(enEscritorio);
+  const [aplausoDelOrbe, setAplausoDelOrbe] = useState(0);
+
+  useEffect(() => {
+    if (!enEscritorio) return undefined;
+    return window.gabyPC!.alAplaudir(() => setAplausoDelOrbe((n) => n + 1));
+  }, [enEscritorio]);
+
   const handsFree = useHandsFree({
     activo: manosLibres && !wakeWord.enabled,
     onTexto: (texto) => handleSendText(texto),
     // Mientras Gaby habla, lo que entra por el micrófono es su propia voz.
     pausado: isSpeaking,
+    disparoExterno: aplausoDelOrbe,
+    detectarAplauso: !enEscritorio,
   });
   // La pantalla no se apaga mientras Gaby está escuchando, para que "Hey Gaby" siga funcionando.
   useWakeLock(wakeWord.enabled);
@@ -192,6 +210,24 @@ export default function AssistantScreen() {
     : wakeWord.enabled || handsFree.status === 'grabando'
     ? 'listening'
     : 'idle';
+
+  // Lo que está pasando, para que el orbe del escritorio lo muestre y deje de
+  // contar aplausos mientras tanto: durante la conversación, lo que entra por
+  // el micrófono es la conversación misma.
+  const faseParaElOrbe =
+    handsFree.status === 'grabando'
+      ? 'grabando'
+      : handsFree.status === 'transcribiendo'
+      ? 'transcribiendo'
+      : sending
+      ? 'pensando'
+      : isSpeaking
+      ? 'hablando'
+      : 'libre';
+
+  useEffect(() => {
+    window.gabyPC?.avisarEstado(faseParaElOrbe);
+  }, [faseParaElOrbe]);
 
   // Emociones que reemplazan a la de `orbState`: primero lo que sale mal, y si no
   // hay nada de eso, la que se detectó en el texto de la última respuesta mientras
