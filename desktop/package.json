@@ -20,6 +20,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "preload-app.js",
+      "acciones.js",
       "orbe/**/*",
       "icono.png"
     ],

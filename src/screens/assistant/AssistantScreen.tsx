@@ -18,6 +18,7 @@ import { colors, glow } from '@/theme';
 import GabyOrb, { Emotion, OrbState } from '@/components/GabyOrb';
 import StarField from '@/components/StarField';
 import { detectEmotionFromText } from '@/utils/detectEmotion';
+import { interpretarComandoPC } from '@/utils/pcCommands';
 
 const TITLE_LABEL: Record<string, string> = {
   thinking: 'Pensando…',
@@ -53,25 +54,46 @@ export default function AssistantScreen() {
   const { speak, cancel: cancelSpeech, supported: speechSupported } = useSpeak();
   const { tiltX: deviceTiltX, tiltY: deviceTiltY, requestPermission: requestTiltPermission } = useDeviceTilt();
 
+  /** Dice algo en voz alta con el mismo trato que una respuesta normal. */
+  const decir = (texto: string) => {
+    if (!voiceReplies || !speechSupported) return;
+    wakeWord.pause();
+    speak(texto, {
+      onStart: () => setIsSpeaking(true),
+      onBoundary: () => setTalkPulse((v) => v + 1),
+      onEnd: () => {
+        setIsSpeaking(false);
+        wakeWord.resume();
+      },
+    });
+  };
+
   const handleSendText = async (text: string) => {
     if (!workspace || !profile || !text.trim() || sendingRef.current) return;
+
+    // Las órdenes del computador se resuelven aquí mismo: son instantáneas, y
+    // esperar una respuesta de red para subir el volumen se nota. Solo existen
+    // dentro del programa de escritorio, que es quien expone window.gabyPC; en
+    // un navegador normal esto no se llega a ejecutar y todo va al asistente.
+    const puente = typeof window !== 'undefined' ? window.gabyPC : undefined;
+    const orden = puente ? interpretarComandoPC(text) : null;
+    if (orden && puente) {
+      const resultado = await puente.ejecutar(orden.accion, orden.args);
+      const respuesta = resultado.ok
+        ? orden.respuesta
+        : `No pude hacerlo: ${resultado.error ?? 'algo falló'}`;
+      setError(resultado.ok ? null : respuesta);
+      decir(respuesta);
+      return;
+    }
+
     sendingRef.current = true;
     setSending(true);
     setError(null);
     try {
       const reply = await sendAssistantMessage(workspace.id, profile.uid, text.trim());
       setReplyEmotion(detectEmotionFromText(reply));
-      if (voiceReplies && speechSupported) {
-        wakeWord.pause();
-        speak(reply, {
-          onStart: () => setIsSpeaking(true),
-          onBoundary: () => setTalkPulse((v) => v + 1),
-          onEnd: () => {
-            setIsSpeaking(false);
-            wakeWord.resume();
-          },
-        });
-      }
+      decir(reply);
     } catch (e: any) {
       setError(`No se pudo enviar el mensaje (${e?.code ?? 'error'}): ${e?.message ?? e}`);
     } finally {

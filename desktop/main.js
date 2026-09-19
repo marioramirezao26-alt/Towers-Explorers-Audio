@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, net, protocol, scr
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { ACCIONES } = require('./acciones');
 
 /**
  * Gaby en el escritorio: el orbe flotando siempre encima de las demás ventanas,
@@ -147,6 +148,13 @@ function abrirGaby() {
     backgroundColor: '#03060f',
     title: 'Gaby',
     icon: path.join(__dirname, 'icono.png'),
+    webPreferences: {
+      // Le da a la app el puente para manejar el computador. Va aislado y sin
+      // Node en la página: lo único que cruza es pedir una acción del catálogo.
+      preload: path.join(__dirname, 'preload-app.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
   ventanaApp.setMenuBarVisibility(false);
   ventanaApp.loadURL(URL_GABY);
@@ -172,6 +180,38 @@ function centrarOrbe() {
   ventanaOrbe.setPosition(x, y);
   ventanaOrbe.show();
   guardarEstado({ x, y });
+}
+
+/**
+ * Atiende las peticiones del puente: comprueba quién llama y qué pide, y solo
+ * entonces ejecuta.
+ *
+ * La comprobación de origen es la que sostiene todo esto. El preload viaja con
+ * una ventana que carga una página de internet; si esa página fuese sustituida
+ * por otra (una redirección, un enlace que lleve fuera), seguiría teniendo el
+ * puente delante. Exigiendo que quien pide sea exactamente el origen de Gaby,
+ * cualquier otra página se queda sin él.
+ */
+async function manejarAccion(evento, carga) {
+  try {
+    const origenEsperado = new URL(URL_GABY).origin;
+    const origenReal = new URL(evento.senderFrame?.url ?? '').origin;
+    if (origenReal !== origenEsperado) {
+      return { ok: false, error: 'Petición desde un origen no autorizado.' };
+    }
+
+    const { accion, args } = carga ?? {};
+    // Object.hasOwn y no un acceso directo: 'constructor' o '__proto__' son
+    // propiedades de cualquier objeto y no son acciones.
+    if (typeof accion !== 'string' || !Object.hasOwn(ACCIONES, accion)) {
+      return { ok: false, error: `No sé hacer "${accion}".` };
+    }
+
+    const resultado = await ACCIONES[accion](args ?? {}, ventanaApp);
+    return { ok: true, resultado: resultado ?? null };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function construirMenu() {
@@ -235,6 +275,7 @@ if (!app.requestSingleInstanceLock()) {
     crearBandeja();
     ipcMain.on('abrir-gaby', abrirGaby);
     ipcMain.on('ocultar-orbe', () => ventanaOrbe?.hide());
+    ipcMain.handle('gaby-pc', manejarAccion);
   });
 
   // A propósito no se cierra la app al cerrar las ventanas: Gaby vive en la
