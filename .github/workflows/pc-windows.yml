@@ -1,8 +1,13 @@
 name: App de Windows
 
-# Compila Gaby como un .exe portable: el orbe flotando siempre encima del
-# escritorio, y la app completa a un clic. Se descarga desde la pestaña
-# "Actions" del repo (dentro del run, en "Artifacts") y se ejecuta sin instalar.
+# Compila Gaby para Windows: el orbe flotando siempre encima del escritorio, y
+# la app completa a un clic. Se ejecuta sin instalar.
+#
+# El resultado se publica en el Release "pc-latest", que es un enlace fijo y no
+# cambia de una versión a otra. Descargar desde "Artifacts" exige navegador,
+# sesión iniciada y encontrar el recuadro al final del run; desde el Release
+# basta un Invoke-WebRequest, y esa diferencia en la práctica es la que decide
+# si la versión nueva acaba instalada o no.
 
 on:
   workflow_dispatch: {}
@@ -15,6 +20,9 @@ on:
 jobs:
   exe:
     runs-on: windows-latest
+    # Necesario para publicar el Release desde el propio flujo.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +49,24 @@ jobs:
             desktop/dist/Gaby-carpeta.zip
             desktop/dist/Gaby-portable.exe
           retention-days: 90
+
+      - name: Publicar en el Release de descarga directa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Se borra y se recrea en vez de actualizarlo: así "releases/latest"
+        # apunta siempre a esta compilación, que es lo que hace que el enlace de
+        # descarga no cambie nunca. El `|| true` es para la primera vez, cuando
+        # todavía no hay nada que borrar.
+        run: |
+          gh release delete pc-latest --yes --cleanup-tag || true
+          gh release create pc-latest `
+            desktop/dist/Gaby-carpeta.zip `
+            desktop/dist/Gaby-portable.exe `
+            --title "Gaby para Windows" `
+            --notes "Compilado desde ${{ github.sha }}.
+
+          Instalar (PowerShell):
+
+              Invoke-WebRequest https://github.com/${{ github.repository }}/releases/latest/download/Gaby-carpeta.zip -OutFile \$env:TEMP\Gaby.zip
+              Expand-Archive \$env:TEMP\Gaby.zip -DestinationPath C:\Gaby -Force
+              C:\Gaby\Gaby.exe"
