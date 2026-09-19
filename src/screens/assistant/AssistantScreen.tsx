@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { sendAssistantMessage, subscribeToAssistantMessages } from '@/services/assistant';
 import { useWakeWord } from '@/hooks/useWakeWord';
-import { useClapWake } from '@/hooks/useClapWake';
+import { useHandsFree } from '@/hooks/useHandsFree';
 import { useSpeak } from '@/hooks/useSpeak';
 import { useDeviceTilt } from '@/hooks/useDeviceTilt';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -82,13 +82,16 @@ export default function AssistantScreen() {
 
   const wakeWord = useWakeWord({ onCommand: (command) => handleSendText(command) });
 
-  // Dos palmas encienden la escucha sin tocar nada. El detector solo corre
-  // mientras Gaby NO está escuchando: así no compiten dos usos del micrófono, y
-  // al terminar la conversación vuelve a quedar a la espera del aplauso.
-  const [clapEnabled, setClapEnabled] = useState(false);
-  const clap = useClapWake({
-    activo: clapEnabled && !wakeWord.enabled,
-    onClap: () => wakeWord.start(),
+  // Manos libres: aplaudes dos veces, Gaby graba lo que dices, se da cuenta de
+  // cuándo callaste y lo manda a transcribir. No usa el reconocimiento del
+  // navegador porque dentro de la app de escritorio no funciona; va por la nube,
+  // que sirve igual en el .exe, en Chrome y en el teléfono.
+  const [manosLibres, setManosLibres] = useState(false);
+  const handsFree = useHandsFree({
+    activo: manosLibres && !wakeWord.enabled,
+    onTexto: (texto) => handleSendText(texto),
+    // Mientras Gaby habla, lo que entra por el micrófono es su propia voz.
+    pausado: isSpeaking,
   });
   // La pantalla no se apaga mientras Gaby está escuchando, para que "Hey Gaby" siga funcionando.
   useWakeLock(wakeWord.enabled);
@@ -157,11 +160,11 @@ export default function AssistantScreen() {
     setVoiceReplies((v) => !v);
   };
 
-  const orbState: OrbState = sending
+  const orbState: OrbState = sending || handsFree.status === 'transcribiendo'
     ? 'thinking'
     : isSpeaking
     ? 'speaking'
-    : wakeWord.enabled
+    : wakeWord.enabled || handsFree.status === 'grabando'
     ? 'listening'
     : 'idle';
 
@@ -194,13 +197,13 @@ export default function AssistantScreen() {
               {TITLE_LABEL[orbState] ?? TITLE_LABEL.idle}
             </Text>
           </View>
-          {clap.supported && (
+          {handsFree.supported && (
             <IconButton
               icon="hand-clap"
               mode="contained"
               containerColor="rgba(255,255,255,0.06)"
-              iconColor={clapEnabled ? colors.accent : colors.textMuted}
-              onPress={() => setClapEnabled((v) => !v)}
+              iconColor={manosLibres ? colors.accent : colors.textMuted}
+              onPress={() => setManosLibres((v) => !v)}
             />
           )}
           <IconButton
@@ -250,10 +253,14 @@ export default function AssistantScreen() {
             ? 'Suelta cuando termines de hablar…'
             : showPushToTalk
             ? 'Mantén presionado el micrófono para hablarle'
-            : clap.status === 'listening' && !wakeWord.enabled
-            ? 'Aplaude dos veces para hablarme'
-            : clap.status === 'error' && clapEnabled
-            ? 'No se pudo usar el micrófono para oír los aplausos'
+            : handsFree.status === 'grabando'
+            ? 'Te escucho… deja de hablar y lo mando'
+            : handsFree.status === 'transcribiendo'
+            ? 'Entendiendo lo que dijiste…'
+            : handsFree.error
+            ? handsFree.error
+            : handsFree.status === 'esperando'
+            ? 'Aplaude dos veces y háblame'
             : STATUS_LABEL[wakeWord.status] ?? STATUS_LABEL.idle}
         </Text>
 
